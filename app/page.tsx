@@ -1,64 +1,118 @@
-import Image from "next/image";
+"use client";
+import { useEffect, useState } from "react";
+import { supabase } from "../supabaseClient";
+
+// ข้อสอบจำลองระบบสำรอง (Fallback) หากฐานข้อมูลยังไม่ส่งค่ากลับมา
+const sampleQuestions = [
+  {
+    id: 1,
+    question_text: "ตาม พ.ร.บ. ระเบียบบริหารราชการแผ่นดิน การจัดตั้ง กระทรวง ทบวง กรม ต้องตราเป็นกฎหมายใด?",
+    choice_a: "พระราชกำหนด (พ.ร.ก.)",
+    choice_b: "พระราชบัญญัติ (พ.ร.บ.)",
+    choice_c: "พระราชกฤษฎีกา (พ.ร.ฎ.)",
+    choice_d: "กฎกระทรวง",
+    correct_choice: "choice_b",
+    explanation: "การจัดตั้ง การรวม หรือการโอนกระทรวง ทบวง กรม ให้ตราเป็นพระราชบัญญัติ (พ.ร.บ.)"
+  }
+];
 
 export default function Home() {
+  const [questions, setQuestions] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [selectedAnswer, setSelectedAnswer] = useState(null);
+  const [showAnswer, setShowAnswer] = useState(false);
+
+  useEffect(() => {
+    async function fetchQuestions() {
+      try {
+        // ทดลองดึงข้อมูลจริงจาก Supabase
+        const { data, error } = await supabase.from("questions").select("*");
+        if (error || !data || data.length === 0) {
+          setQuestions(sampleQuestions);
+        } else {
+          setQuestions(data);
+        }
+      } catch (err) {
+        setQuestions(sampleQuestions);
+      } finally {
+        setLoading(false);
+      }
+    }
+    fetchQuestions();
+  }, []);
+
+  const handleAnswerClick = (choiceKey) => {
+    setSelectedAnswer(choiceKey);
+    setShowAnswer(true);
+  };
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
+    <div className="min-h-screen bg-slate-50 p-6 flex flex-col items-center">
+      <header className="w-full max-w-2xl mb-8 text-center">
+        <h1 className="text-3xl font-bold text-blue-600 mb-2">bandektutor</h1>
+        <p className="text-gray-600 font-medium">ระบบคลังข้อสอบเตรียมสอบราชการอัจฉริยะ</p>
+      </header>
+
+      <main className="w-full max-w-2xl bg-white rounded-2xl shadow-xl p-6 border border-slate-100">
+        {loading ? (
+          <p className="text-center text-gray-500 py-8">กำลังโหลดคลังข้อสอบ...</p>
+        ) : (
+          <div>
+            <span className="bg-blue-100 text-blue-800 text-xs font-semibold px-2.5 py-1 rounded mb-4 inline-block">
+              แนวข้อสอบแนะนำประจำวัน
+            </span>
+            {questions.map((q, index) => (
+              <div key={q.id || index} className="mb-6">
+                <p className="text-lg font-medium text-gray-900 mb-4">{index + 1}. {q.question_text}</p>
+                
+                {/* รายการช้อยส์ข้อสอบ */}
+                <div className="grid grid-cols-1 gap-3">
+                  {[
+                    { key: 'choice_a', text: q.choice_a },
+                    { key: 'choice_b', text: q.choice_b },
+                    { key: 'choice_c', text: q.choice_c },
+                    { key: 'choice_d', text: q.choice_d }
+                  ].map((choice) => {
+                    let btnClass = "w-full text-left p-4 rounded-xl border transition-all text-gray-700 font-medium ";
+                    
+                    if (showAnswer) {
+                      if (choice.key === q.correct_choice) {
+                        btnClass += "bg-emerald-50 border-emerald-400 text-emerald-700 shadow-sm";
+                      } else if (choice.key === selectedAnswer) {
+                        btnClass += "bg-rose-50 border-rose-400 text-rose-700";
+                      } else {
+                        btnClass += "bg-gray-50 border-gray-200 opacity-60";
+                      }
+                    } else {
+                      btnClass += "border-slate-200 hover:bg-slate-50 hover:border-slate-300 active:bg-slate-100";
+                    }
+
+                    return (
+                      <button 
+                        key={choice.key} 
+                        disabled={showAnswer}
+                        onClick={() => handleAnswerClick(choice.key)}
+                        className={btnClass}
+                      >
+                        {choice.text}
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {/* กล่องแสดงผลเฉลยรายละเอียดหลังกดยืนยันคำตอบ */}
+                {showAnswer && (
+                  <div className="mt-6 p-4 bg-blue-50 border border-blue-100 rounded-xl">
+                    <p className="font-bold text-blue-900 mb-1">
+                      {selectedAnswer === q.correct_choice ? "🎉 ตอบถูกต้อง!" : "❌ ตอบผิดนะครับ"}
+                    </p>
+                    <p className="text-sm text-gray-700"><span className="font-semibold">เฉลยละเอียด:</span> {q.explanation}</p>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
       </main>
     </div>
   );
