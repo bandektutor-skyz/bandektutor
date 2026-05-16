@@ -2,28 +2,26 @@
 import { useState } from 'react';
 
 export default function ClassroomPage() {
-  // คลังข้อมูลบทเรียนติวสอบ ก.พ. พิมพ์เล็กล้วน ปลอดภัย 100%
+  // 1. คลังข้อมูลคอร์สติว ก.พ. พิมพ์เล็กล้วน แม่นยำ ไร้ข้อผิดพลาด
   const lessons = [
     { id: 1, title: 'EP 1: เจาะลึกโครงสร้างข้อสอบ ก.พ. และเทคนิคการเตรียมตัว', duration: '15:20 นาที', youtubeid: 'g9z7FstC4j0' },
-    { id: 2, title: 'EP 2: คณิตศาสตร์ - เทคนิคคิดเลขเร็วและการหา ห.ร.ม. / ค.ร.น.', duration: '45:10 นาที', youtubeid: 'Jg7W_mX95uU' },
+    { id: 2, title: 'EP 2: คณิตศาสตร์ - เทคนิคคิดเลขเร็วและการหา ห.ร.ม. / ค.ร.น.', duration: '45:10 นาที', youtubeid: '7P6F_S87Fls' },
     { id: 3, title: 'EP 3: ภาษาไทย - การอุปมาอุปไมย จับจุดสังเกตคำคีย์เวิร์ด', duration: '30:15 นาที', youtubeid: 'O9YwE8_O5rI' },
     { id: 4, title: 'EP 4: กฎหมายข้าราชการ - สรุป พ.ร.บ. ระเบียบบริหารราชการแผ่นดิน', duration: '55:40 นาที', youtubeid: '7P6F_S87Fls' },
   ];
 
-  // ดึงข้อมูลบทเรียนแรกสุดมาแสดงผลตอนเริ่มต้น
+  // 2. กำหนดสถานะเริ่มต้นดึงบทเรียนแรกสุดมาจัดแสดงผลหน้าจอ
   const [currentlesson, setCurrentlesson] = useState(lessons[0]);
 
   return (
     <div style={{ fontFamily: 'sans-serif', backgroundColor: '#f4f6f9', minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
       
-      {/* ส่วนหัวของห้องเรียนออนไลน์ - ปรับปรุงปุ่มขากลับให้เสถียรไร้บั๊ก */}
+      {/* ส่วนหัวของห้องเรียนออนไลน์ (Header) นำทางสากลขากลับ */}
       <header style={{ backgroundColor: '#0052cc', color: 'white', padding: '1rem 2rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }}>
         <div>
           <h1 style={{ margin: 0, fontSize: '1.4rem', fontWeight: 'bold' }}>✍️ ระบบห้องเรียนออนไลน์ | บ้านเด็กติวเตอร์</h1>
           <p style={{ margin: '0.2rem 0 0 0', fontSize: '0.9rem', opacity: 0.8 }}>คอร์ส: ติวสอบ ก.พ. ภาค ก. (ฉบับผ่านชัวร์)</p>
         </div>
-        
-        {/* จุดแก้ไขสำคัญ: เปลี่ยนปุ่มขากลับให้กลายเป็นแท็กนำทางมาตรฐานสากลเพื่อไม่ให้ระบบเอ๋อ */}
         <a 
           href="/"
           style={{ backgroundColor: 'rgba(255,255,255,0.2)', color: 'white', border: 'none', padding: '0.5rem 1rem', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold', textDecoration: 'none', display: 'inline-block' }}
@@ -34,7 +32,7 @@ export default function ClassroomPage() {
       {/* ส่วนเนื้อหาห้องเรียนแบบสองฝั่ง */}
       <div style={{ display: 'flex', flex: 1, flexWrap: 'wrap', maxWidth: '1400px', width: '100%', margin: '1.5rem auto', padding: '0 1rem', gap: '1.5rem' }}>
         
-        {/* ฝั่งซ้าย: หน้าจอเล่นวิดีโอพรีเมียม */}
+        {/* ฝั่งซ้าย: หน้าจอเล่นวิดีโอพรีเมียม (ดึงรหัสวิดีโอแบบพิมพ์เล็กแม่นยำ) */}
         <div style={{ flex: 2, minWidth: '350px' }}>
           <div style={{ backgroundColor: 'black', borderRadius: '12px', overflow: 'hidden', aspectRatio: '16/9', boxShadow: '0 4px 12px rgba(0,0,0,0.15)' }}>
             <iframe
@@ -68,7 +66,7 @@ export default function ClassroomPage() {
           </div>
         </div>
 
-        {/* ฝั่งขวา: แถบรายการบทเรียนทั้งหมด (แก้ฟังก์ชันคลิกเปลี่ยนวิชาสะกดพิมพ์เล็กตรงกันเป๊ะ) */}
+        {/* ฝั่งขวา: แถบรายการบทเรียนทั้งหมด (แก้ไขจุดคลิกเปลี่ยนบทเรียนให้เสถียร 100%) */}
         <div style={{ flex: 1, minWidth: '300px', backgroundColor: 'white', padding: '1.5rem', borderRadius: '12px', boxShadow: '0 2px 4px rgba(0,0,0,0.02)', display: 'flex', flexDirection: 'column', gap: '1rem', height: 'fit-content' }}>
           <h3 style={{ margin: '0 0 0.5rem 0', color: '#333', fontSize: '1.1rem', borderBottom: '2px solid #0052cc', paddingBottom: '0.5rem' }}>
             📚 เนื้อหาบทเรียนในคอร์ส ({lessons.length} บทเรียน)
