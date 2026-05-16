@@ -17,7 +17,7 @@ export default function ClassroomPage() {
   const [loginMessage, setLoginMessage] = useState('');
   const [studentName, setStudentName] = useState('');
 
-  // [แก้ไขเรียบร้อย] ใส่ lessons[0] บรรทัดที่ 19 เพื่อกำหนดให้ดึงเฉพาะคอร์สเดี่ยวตัวแรกสุดมาเปิดจอเล่นแก้ 6 บั๊กล่าง
+  // [แก้ไขเรียบร้อย] ใส่ [0] บรรทัดที่ 19 เพื่อดึงเฉพาะคอร์สเดี่ยวตัวแรกสุดมาเปิดจอเล่นแก้ 6 บั๊กล่างใน Problems
   const [currentlesson, setCurrentlesson] = useState(lessons[0]);
   
   // ระบบจำลองเก็บข้อมูลสถิติมัดใจผู้เรียน ตามแผนกลยุทธ์ของคุณ
@@ -54,7 +54,7 @@ export default function ClassroomPage() {
       if (error) throw error;
 
       if (data && data.length > 0) {
-        // [แก้ไขเรียบร้อย] ระบุเจาะจง data[0] เพื่อทลายข้อจำกัด Array บรรทัดที่ 56, 61, 62 แก้ 3 บั๊กบนสำเร็จ!
+        // [แก้ไขเรียบร้อย] ระบุเจาะจง data[0] เพื่อทลายข้อจำกัด Array แก้ 3 บั๊กบนใน Problems สำเร็จ!
         setStudentName(data[0].student_name);
         setIsAuthenticated(true);
         setLoginMessage('');
