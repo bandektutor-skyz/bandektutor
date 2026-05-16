@@ -7,7 +7,7 @@ export default function HomePage() {
   const [selectedCourse, setSelectedCourse] = useState<string | null>(null);
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [username, setUsername] = useState(''); // ใช้เก็บรหัสเบอร์โทรศัพท์หรือชื่อตอนพิมพ์
+  const [username, setUsername] = useState(''); // ใช้เก็บรหัสเบอร์โทรศัพท์ตอนพิมพ์
   const [displayStudentName, setDisplayStudentName] = useState(''); // ใช้แสดงชื่อจริงเมื่อเช็คผ่าน
   
   // ตัวแปรรับค่าฟอร์มสมัครเรียน
@@ -41,13 +41,12 @@ export default function HomePage() {
     }
   ];
 
-  // [อัปเกรดระบบล็อกอินตัวจริง] ฟังก์ชันวิ่งไปเช็คข้อมูลใน Supabase ป้องกันคนใส่มั่ว!
+  // ฟังก์ชันวิ่งไปเช็คข้อมูลใน Supabase พร้อมแจกตั๋วจำความจำข้ามหน้าต่างอัตโนมัติ
   const handleLoginSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoginErrorMessage('⏳ กำลังตรวจสอบรายชื่อในฐานข้อมูลหลังบ้าน...');
 
     try {
-      // ค้นหาในตาราง enrollment ว่ามีเบอร์โทรนี้ และได้รับการ "อนุมัติแล้ว" หรือไม่
       const { data, error } = await supabase
         .from('enrollment')
         .select('*')
@@ -57,13 +56,19 @@ export default function HomePage() {
       if (error) throw error;
 
       if (data && data.length > 0) {
-        // หากตรวจพบข้อมูลในฐานข้อมูลจริง สั่งอนุมัติให้ล็อกอินผ่านได้!
-        setDisplayStudentName(data[0].student_name);
+        // ดึงข้อมูลของนักเรียนคนแรกในกล่องแถวข้อมูลที่ตรวจเจอ
+        const currentStudent = data[0];
+        
+        setDisplayStudentName(currentStudent.student_name);
         setIsLoggedIn(true);
         setShowLoginModal(false);
         setLoginErrorMessage('');
+
+        // [จุดอัปเกรดสำคัญสุด] สั่งแจกตั๋วความจำฝังลงเครื่องนักเรียน เพื่อให้เปิดด่านเข้าเรียนได้เลยทันทีไม่ต้องพิมพ์ซ้ำ
+        localStorage.setItem('user_phone', currentStudent.student_phone);
+        localStorage.setItem('user_name', currentStudent.student_name);
+
       } else {
-        // หากกรอกมั่วหรือยังไม่อนุมัติ ระบบจะดีดออกและขึ้นเตือนทันที
         setIsLoggedIn(false);
         setLoginErrorMessage('❌ ไม่พบสิทธิ์! เบอร์โทรนี้ยังไม่ได้ลงทะเบียน หรือแอดมินยังไม่ได้กดอนุมัติเข้าเรียนครับ');
       }
@@ -92,7 +97,7 @@ export default function HomePage() {
 
   return (
     <div style={{ fontFamily: '"ChulaCharasNew", "Helvetica Neue", sans-serif', color: '#333', backgroundColor: '#fdfdfd', minHeight: '100vh' }}>
-      {/* 1. แถบเมนูด้านบน (Navbar) ดึงค่าชื่อนักเรียนจริงจากการตรวจสอบฐานข้อมูลมาแสดง */}
+      {/* 1. แถบเมนูด้านบน (Navbar) แสดงผลต้อนรับด้วยชื่อจริงที่ดึงมาจากฐานข้อมูล */}
       <nav style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '1rem 2rem', backgroundColor: '#ffffff', boxShadow: '0 2px 4px rgba(0,0,0,0.05)', position: 'sticky', top: 0, zIndex: 100 }}>
         <div style={{ fontWeight: 'bold', fontSize: '1.5rem', color: '#0070f3', display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }} onClick={() => window.location.href = '/'}>
           🎓 บ้านเด็กติวเตอร์
@@ -101,11 +106,21 @@ export default function HomePage() {
           <span style={{ cursor: 'pointer', color: '#0070f3' }}>หน้าแรก</span>
           <span style={{ cursor: 'pointer', color: '#666' }} onClick={() => window.location.href = '/classroom'}>ห้องเรียนออนไลน์</span>
           
-          {/* สลับหน้าจอทักทายชื่อจริงเมื่อระบบหลังบ้านตรวจสอบพบสิทธิ์เท่านั้น */}
+          {/* เงื่อนไขการแสดงผลเมื่อนักเรียนตรวจสอบสิทธิ์เบอร์โทรศัพท์ผ่านฐานข้อมูลสำเร็จ */}
           {isLoggedIn ? (
             <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
               <span style={{ color: '#28a745', fontWeight: 'bold' }}>👤 สวัสดี, คุณ {displayStudentName}</span>
-              <button onClick={() => { setIsLoggedIn(false); setUsername(''); }} style={{ backgroundColor: '#dc3545', color: 'white', border: 'none', padding: '0.5rem 1rem', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold' }}>ออกจากระบบ</button>
+              <button 
+                onClick={() => { 
+                  localStorage.removeItem('user_phone');
+                  localStorage.removeItem('user_name');
+                  setIsLoggedIn(false); 
+                  setUsername(''); 
+                }} 
+                style={{ backgroundColor: '#dc3545', color: 'white', border: 'none', padding: '0.5rem 1rem', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold' }}
+              >
+                ออกจากระบบ
+              </button>
             </div>
           ) : (
             <button 
@@ -118,7 +133,7 @@ export default function HomePage() {
         </div>
       </nav>
 
-      {/* 2. ส่วนโปรโมทหลัก (Hero Section) */}
+      {/* 2. ส่วนโปรโมทหลัก (Hero Section) แท็กเปิดประตูตรงไปยัง /classroom อัจฉริยะ */}
       <header style={{ padding: '5rem 2rem', textAlign: 'center', color: 'white', background: 'linear-gradient(135deg, #0052cc 0%, #00a4ff 100%)' }}>
         <h1 style={{ fontSize: '3rem', marginBottom: '1rem', fontWeight: '800', letterSpacing: '-0.5px' }}>
           สานฝันเส้นทางข้าราชการกับ "บ้านเด็กติวเตอร์"
@@ -221,14 +236,13 @@ export default function HomePage() {
           </div>
         )}
 
-        {/* [แก้ไขเรียบร้อย] ป๊อปอัปฟอร์มเข้าสู่ระบบนักเรียนเวอร์ชันคัดกรองเบอร์โทรศัพท์จริงจากตารางหลังบ้าน */}
+        {/* ป๊อปอัปฟอร์มเข้าสู่ระบบนักเรียนเวอร์ชันตรวจสิทธิ์หนาแน่นสูง */}
         {showLoginModal && (
           <div style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', justifyContent: 'center', zIndex: 1000, alignItems: 'center' }}>
             <div style={{ backgroundColor: 'white', padding: '2.5rem', borderRadius: '16px', maxWidth: '400px', width: '90%', textAlign: 'center', boxShadow: '0 20px 40px rgba(0,0,0,0.2)' }}>
               <div style={{ fontSize: '2.5rem', marginBottom: '0.5rem' }}>🔐</div>
               <h3 style={{ fontSize: '1.4rem', marginBottom: '1.5rem' }}>เข้าสู่ระบบนักเรียน</h3>
               
-              {/* แสดงกล่องข้อความเตือนเมื่อป้อนเบอร์โทรศัพท์ผิดพลาด */}
               {loginErrorMessage && (
                 <div style={{ padding: '0.8rem', marginBottom: '1rem', borderRadius: '6px', backgroundColor: loginErrorMessage.includes('❌') ? '#fff0f0' : '#e6f0ff', color: loginErrorMessage.includes('❌') ? '#dc3545' : '#0052cc', fontSize: '0.85rem', fontWeight: 'bold', textAlign: 'left' }}>
                   {loginErrorMessage}
@@ -248,7 +262,7 @@ export default function HomePage() {
                   />
                 </div>
                 <div>
-                  <label style={{ display: 'block', marginBottom: '0.3rem', fontWeight: 'bold', fontSize: '0.9rem' }}>รหัสผ่านความปลอดภัย (ใส่รหัสผ่านใดก็ได้):</label>
+                  <label style={{ display: 'block', marginBottom: '0.3rem', fontWeight: 'bold', fontSize: '0.9rem' }}>รหัสผ่านความปลอดภัย (ใส่รหัสใดก็ได้):</label>
                   <input type="password" required placeholder="••••••••" style={{ width: '100%', padding: '0.6rem', borderRadius: '6px', border: '1px solid #ccc', boxSizing: 'border-box' }} />
                 </div>
                 
@@ -262,7 +276,7 @@ export default function HomePage() {
         )}
       </main>
 
-      {/* 4. ส่วนท้ายเว็บ (Footer) */}
+      {/* 4. ส่วนท้ายเว็บ */}
       <footer style={{ backgroundColor: '#111', color: '#888', padding: '3rem 2rem', textAlign: 'center', borderTop: '1px solid #222' }}>
         <p style={{ margin: 0, fontSize: '0.95rem' }}>© 2026 บ้านเด็กติวเตอร์ (Bandektutor) - สงวนลิขสิทธิ์ทุกประการ</p>
         <p style={{ marginTop: '0.5rem', fontSize: '0.85rem', color: '#555' }}>พัฒนาโดยแพลตฟอร์ม Next.js + Node.js ระดับมืออาชีพ</p>
