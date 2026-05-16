@@ -1,45 +1,44 @@
 'use client';
-import { useState, useEffect } from 'react';
-import { supabase } from '../../supabaseClient'; // นำเข้ากุญแจเชื่อมหลังบ้านเพื่อเช็คเบอร์โทร
+import { useState } from 'react';
+import { supabase } from '../../supabaseClient'; // เชื่อมฐานข้อมูลเช็คสิทธิ์เบอร์โทรศัพท์
 
 export default function ClassroomPage() {
   // 1. คลังข้อมูลบทเรียน ก.พ. พิมพ์เล็กล้วน
   const lessons = [
     { id: 1, title: 'EP 1: เจาะลึกโครงสร้างข้อสอบ ก.พ. และเทคนิคการเตรียมตัว', duration: '15:20 นาที', youtubeid: 'g9z7FstC4j0' },
-    { id: 2, title: 'EP 2: คณิตศาสตร์ - เทคนิคคิดเลขเร็วและการหา ห.ร.ม. / ค.ร.น.', duration: '45:10 นาที', youtubeid: '7P6F_S87Fls' },
+    { id: 2, title: 'EP 2: คณิตศาสตร์ - เทคนิคคิดเลขเร็วและการหา ห.ร.ม. / ค.ร.น.', duration: '45:10 นาที', youtubeid: 'Jg7W_mX95uU' },
     { id: 3, title: 'EP 3: ภาษาไทย - การอุปมาอุปไมย จับจุดสังเกตคำคีย์เวิร์ด', duration: '30:15 นาที', youtubeid: 'O9YwE8_O5rI' },
     { id: 4, title: 'EP 4: กฎหมายข้าราชการ - สรุป พ.ร.บ. ระเบียบบริหารราชการแผ่นดิน', duration: '55:40 นาที', youtubeid: '7P6F_S87Fls' },
   ];
 
-  // ระบบจัดการสถานะการล็อกอินและตัวคัดกรองเบอร์โทรศัพท์
+  // ระบบจัดการสถานะล็อกอินและการเข้าถึงสิทธิ์
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [phoneInput, setPhoneInput] = useState('');
   const [loginMessage, setLoginMessage] = useState('');
-  const [currentlesson, setCurrentlesson] = useState(lessons);
   const [studentName, setStudentName] = useState('');
 
-  // ฟังก์ชันส่องตรวจสอบเบอร์โทรศัพท์ในตาราง enrollment ว่าอนุมัติแล้วหรือยัง
+  // [จุดแก้ไขสำคัญสุด] ใส่ [0] ต่อท้ายคำว่า lessons เพื่อระบุเจาะจงบทเรียนเดี่ยวตัวแรกสุด แก้ไขปัญหา Error ทั้ง 6 จุดทันที!
+  const [currentlesson, setCurrentlesson] = useState(lessons[0]);
+
+  // ฟังก์ชันส่องตรวจสอบเบอร์โทรศัพท์ในตาราง enrollment
   const handleCheckLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoginMessage('⏳ กำลังตรวจสอบสิทธิ์การเข้าเรียนจากหลังบ้าน...');
 
     try {
-      // ค้นหาแถวข้อมูลที่เบอร์โทรศัพท์ตรงกับที่กรอก และมีสถานะเท่ากับ 'อนุมัติแล้ว' [1]
       const { data, error } = await supabase
         .from('enrollment')
         .select('*')
         .eq('student_phone', phoneInput.trim())
-        .eq('status', 'อนุมัติแล้ว'); // ดึงเฉพาะคนที่แอดมินกดอนุมัติแล้วเท่านั้น [1]
+        .eq('status', 'อนุมัติแล้ว');
 
       if (error) throw error;
 
       if (data && data.length > 0) {
-        // หากพบข้อมูลผ่านเกณฑ์ สั่งเปิดไฟเขียวให้เข้าเรียนได้ทันที!
-        setStudentName(data[0].student_name);
+        setStudentName(data[0].student_name); // ดึงรายชื่อนักเรียนตัวจริงมาแสดง
         setIsAuthenticated(true);
         setLoginMessage('');
       } else {
-        // หากไม่พบเบอร์โทร หรือเบอร์นั้นยังขึ้นรอตรวจสอบ ให้ขึ้นข้อความปฏิเสธการเข้าถึงสิทธิ์
         setLoginMessage('❌ ไม่พบสิทธิ์เข้าเรียน! เบอร์โทรนี้อาจจะยังไม่ได้สมัคร หรือแอดมินยังไม่ได้กดอนุมัติสลิปโอนเงินครับ');
       }
     } catch (error: any) {
@@ -47,7 +46,7 @@ export default function ClassroomPage() {
     }
   };
 
-  // ส่วนแสดงหน้าฟอร์มล็อกอินคัดกรองเบอร์โทรศัพท์ (จะขึ้นโชว์เมื่อยังไม่ได้ล็อกอิน)
+  // แสดงหน้าต่างล็อกอินคัดกรองเบอร์โทรศัพท์ (หากยังไม่ผ่านด่านความปลอดภัย)
   if (!isAuthenticated) {
     return (
       <div style={{ fontFamily: 'sans-serif', backgroundColor: '#f4f6f9', minHeight: '100vh', display: 'flex', justifyContent: 'center', alignItems: 'center', padding: '1rem' }}>
@@ -76,7 +75,7 @@ export default function ClassroomPage() {
                 style={{ width: '100%', padding: '0.75rem', borderRadius: '8px', border: '1px solid #ccc', boxSizing: 'border-box', fontSize: '1rem' }} 
               />
             </div>
-            <button type="submit" style={{ backgroundColor: '#0052cc', color: 'white', border: 'none', padding: '0.8rem', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold', fontSize: '1.1rem', boxShadow: '0 4px 12px rgba(0,82,204,0.25)', transition: 'background-color 0.2s' }}>
+            <button type="submit" style={{ backgroundColor: '#0052cc', color: 'white', border: 'none', padding: '0.8rem', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold', fontSize: '1.1rem', boxShadow: '0 4px 12px rgba(0,82,204,0.25)' }}>
               🔓 ยืนยันสิทธิ์เข้าเรียน
             </button>
             <button type="button" onClick={() => window.location.href = '/'} style={{ backgroundColor: 'transparent', color: '#666', border: 'none', cursor: 'pointer', fontWeight: 'bold', fontSize: '0.95rem', textAlign: 'center', marginTop: '0.5rem' }}>
@@ -87,7 +86,7 @@ export default function ClassroomPage() {
       </div>
     );
   }
-  // ส่วนแสดงหน้าจอห้องเรียนออนไลน์ (จะทำงานทันทีหลังจากผ่านด่านตรวจสอบสิทธิ์เบอร์โทรสำเร็จ)
+  // ส่วนแสดงหน้าจอห้องเรียนออนไลน์ (จะเปิดไฟเขียวให้แสดงผล ทันทีหลังจากกรอกเบอร์โทรที่อนุมัติแล้วสำเร็จ)
   return (
     <div style={{ fontFamily: 'sans-serif', backgroundColor: '#f4f6f9', minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
       
@@ -113,7 +112,7 @@ export default function ClassroomPage() {
       {/* ส่วนเนื้อหาห้องเรียนแบบสองฝั่ง */}
       <div style={{ display: 'flex', flex: 1, flexWrap: 'wrap', maxWidth: '1400px', width: '100%', margin: '1.5rem auto', padding: '0 1rem', gap: '1.5rem' }}>
         
-        {/* ฝั่งซ้าย: หน้าจอเล่นวิดีโอพรีเมียม (ดึงรหัสวิดีโอแบบพิมพ์เล็กแม่นยำ) */}
+        {/* ฝั่งซ้าย: หน้าจอเล่นวิดีโอพรีเมียม (ดึงค่าบทเรียนเดี่ยวได้ถูกต้อง ไร้บั๊กพิมพ์ใหญ่) */}
         <div style={{ flex: 2, minWidth: '350px' }}>
           <div style={{ backgroundColor: 'black', borderRadius: '12px', overflow: 'hidden', aspectRatio: '16/9', boxShadow: '0 4px 12px rgba(0,0,0,0.15)' }}>
             <iframe
