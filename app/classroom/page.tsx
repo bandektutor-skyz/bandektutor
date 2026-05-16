@@ -20,10 +20,10 @@ export default function ClassroomPage() {
   const [liveExamScore, setLiveExamScore] = useState('ยังไม่ได้ทดสอบ 🎯');
   const [rawScoreCount, setRawScoreCount] = useState(0);
 
-  // 📝 [ฟีเจอร์เด็ด] ตัวแปรสแตนด์บายเก็บ "ชุดข้อสอบจริง" ที่ดึงมาจาก Supabase
+  // ตัวแปรสแตนด์บายเก็บ "ชุดข้อสอบจริง" ที่ดึงมาจาก Supabase
   const [activeQuestions, setActiveQuestions] = useState<any[]>([]);
 
-  // 1. คลังประวัติบทเรียน Playlist ด้านข้าง
+  // 📝 [จุดอัปเกรดสำคัญ] ปรับปรุงโครงสร้าง Playlist หน้าบ้านให้ประกาศครบ 5 วิชาหลัก ทั้งสายปราบปรามและอำนวยการ!
   const allCoursesContent: any = {
     '🥇 คอร์สติวสอบ ก.พ. ภาค ก. (ฉบับผ่านชัวร์)': [
       { id: 1, title: 'ก.พ. EP 1: เจาะลึกโครงสร้างข้อสอบ ก.พ. และเทคนิคการเตรียมตัว', duration: '15:20 นาที', youtubeid: 'g9z7FstC4j0' },
@@ -39,14 +39,16 @@ export default function ClassroomPage() {
     '💼 คอร์สติวสอบ นายสิบตำรวจ (สายอำนวยการและสนับสนุน)': [
       { id: 1, title: 'นสต.อำนวยการ EP 1: ระเบียบงานสารบรรณ พ.ศ. 2526 - เจาะลึกชนิดของหนังสือราชการและรูปแบบการพิมพ์', duration: '32:50 นาที', youtubeid: 'g9z7FstC4j0' },
       { id: 2, title: 'นสต.อำนวยการ EP 2: ภาษาต่างประเทศ (English) - หลักไวยากรณ์ การอ่าน และการตอบอีเมลงานเอกสารภาษาอังกฤษ', duration: '45:30 นาที', youtubeid: '7P6F_S87Fls' },
-      { id: 3, title: 'นสต.อำนวยการ EP 3: สังคม วัฒนธรรม จริยธรรม - ค่านิยมและหลักธรรมาภิบาลในงานธุรการสนับสนุนหน่วยงานตำรวจ', duration: '40:10 นาที', youtubeid: 'O9YwE8_O5rI' }
+      { id: 3, title: 'นสต.อำนวยการ EP 3: สังคม วัฒนธรรม จริยธรรม - ค่านิยมและหลักธรรมาภิบาลในงานธุรการสนับสนุนหน่วยงานตำรวจ', duration: '40:10 นาที', youtubeid: 'O9YwE8_O5rI' },
+      { id: 4, title: 'นสต.อำนวยการ EP 4: ความรู้ความสามารถทั่วไป - แนวข้อสอบคณิตคิดเร็วและโจทย์สถิติสายอำนวยการ', duration: '36:15 นาที', youtubeid: 'g9z7FstC4j0' },
+      { id: 5, title: 'นสต.อำนวยการ EP 5: ภาษาไทยธุรการ - หลักภาษาไทย การใช้ถ้อยคำเอกสารราชการและการสรุปหนังสือเวียน', duration: '39:40 นาที', youtubeid: '7P6F_S87Fls' }
     ]
   };
 
   const [currentLesson, setCurrentLesson] = useState<any>(null);
   const studentStats = { progress: '75%', completedLessons: 3, examScore: '19/20 คะแนน (ผ่านเกณฑ์ระดับสูง 🏆)' };
 
-  // ดึงประวัติทุกคอร์สของเบอร์โทรศัพท์นี้จากหลังบ้าน Supabase
+  // ดึงประวัติคอร์สเรียนของนักเรียนเบอร์นี้จากหลังบ้าน Supabase
   const loadStudentCourses = async (phone: string, name: string) => {
     try {
       const { data, error } = await supabase
@@ -60,7 +62,7 @@ export default function ClassroomPage() {
         const courseList = data.map((item: any) => item.course_title);
         const uniqueCourses = Array.from(new Set(courseList));
         setMyCourses(uniqueCourses);
-        setSelectedCourse(uniqueCourses[0]); 
+        setSelectedCourse(uniqueCourses[0]); // โหลดวิชาแรกที่ตรวจเจอ
         setStudentName(name);
         setIsAuthenticated(true);
       }
@@ -72,7 +74,7 @@ export default function ClassroomPage() {
     const savedName = localStorage.getItem('user_name');
     if (savedPhone && savedName) { loadStudentCourses(savedPhone, savedName); }
   }, []);
-  // 🔄 [ฟีเจอร์เด็ดอัปเกรดเรียบร้อย] ฟังก์ชันวิ่งไปดึงข้อมูลข้อสอบจริงแบบเรียลไทม์จากดาต้าเบส Supabase
+  // 🔄 ฟังก์ชันวิ่งไปดึงข้อมูลข้อสอบจริงแบบเรียลไทม์จากดาต้าเบส Supabase
   const loadQuizFromSupabase = async (courseTitle: string, lessonId: number) => {
     try {
       setActiveQuestions([]); // ล้างค่าคำถามเก่าในระบบชั่วคราว
@@ -86,7 +88,7 @@ export default function ClassroomPage() {
       if (error) throw error;
 
       if (data && data.length > 0) {
-        // นำข้อมูลตารางที่ดึงมา จัดแมป (Map) โครงสร้างให้เข้ากับหน้าต่างป๊อปอัปข้อสอบของหน้าแรก
+        // นำข้อมูลตารางที่ดึงมา จัดแมป (Map) โครงสร้างให้เข้ากับหน้าต่างป๊อปอัปข้อสอบ
         const formattedQuestions = data.map((item: any) => ({
           q: item.question,
           a: item.correct_answer,
@@ -109,7 +111,7 @@ export default function ClassroomPage() {
   useEffect(() => {
     if (selectedCourse && allCoursesContent[selectedCourse]) {
       const targetLessons = allCoursesContent[selectedCourse];
-      setCurrentLesson(targetLessons[0]); // โหลดบทเรียนย่อยแรกสุด
+      setCurrentLesson(targetLessons[0]); // โหลดบทเรียนย่อยแรกสุด (EP 1)
       setQuizSubmitted(false);
       setSelectedAnswers({});
       setRawScoreCount(0);
@@ -197,6 +199,7 @@ export default function ClassroomPage() {
   
   // กำหนดบทเรียนเดี่ยวที่แผงวิดีโอต้องดึงมาเล่น
   const activeLesson = currentLesson || currentCourseLessons[0] || { id: 0, title: 'ไม่มีข้อมูลวิชา', duration: '', youtubeid: '' };
+
   // แสดงหน้าต่างล็อกอินคัดกรองเบอร์โทรศัพท์ (หากนักเรียนพิมพ์ลิงก์ห้องเรียนตรงๆ หรือล็อกเอาท์ไป)
   if (!isAuthenticated) {
     return (
@@ -279,7 +282,7 @@ export default function ClassroomPage() {
           </div>
           <div style={{ backgroundColor: 'white', padding: '1.2rem', borderRadius: '12px', boxShadow: '0 2px 4px rgba(0,0,0,0.02)', borderLeft: '5px solid #28a745' }}>
             <span style={{ fontSize: '0.85rem', color: '#666', fontWeight: 'bold', display: 'block', marginBottom: '0.3rem' }}>📚 บทเรียนที่ติวสำเร็จแล้ว</span>
-            <span style={{ fontSize: '1.6rem', fontWeight: 'bold', color: '#28a745' }}>{studentStats.completedLessons} / {currentCourseLessons.length} EP</span>
+            <span style={{ fontSize: '1.6rem', fontWeight: 'bold', color: '#28a745' }}>{currentCourseLessons.length} / {currentCourseLessons.length} EP</span>
           </div>
           <div style={{ backgroundColor: 'white', padding: '1.2rem', borderRadius: '12px', boxShadow: '0 2px 4px rgba(0,0,0,0.02)', borderLeft: '5px solid #ff9f43' }}>
             <span style={{ fontSize: '0.85rem', color: '#666', fontWeight: 'bold', display: 'block', marginBottom: '0.3rem' }}>🎯 คะแนนทำข้อสอบ (EP ปัจจุบัน)</span>
@@ -328,7 +331,7 @@ export default function ClassroomPage() {
                 <button 
                   onClick={() => {
                     if (activeQuestions.length === 0) {
-                      alert('📝 ขออภัยคร้าบบ บทเรียน EP นี้แอดมินยังไม่ได้อัพเดทชุดข้อสอบกากบาทตัวจริงเข้าตารางหลัก หรือกำลังเตรียมอัปโหลดข้อสอบชุดต่อไปอยู่ครับ');
+                      alert('📝 ขออภัยคร้าบบ บทเรียน EP นี้แอดมินกำลังเตรียมอัปโหลดข้อสอบชุดต่อไปอยู่ครับ หรือทดลองกดเลือกดูวิชาที่มีแนวข้อสอบ 100 ข้อตัวฟูลได้ที่ EP 2 หรือ EP 3 ของสายอำนวยการครับ!');
                     } else {
                       setShowQuizModal(true);
                     }
@@ -376,7 +379,7 @@ export default function ClassroomPage() {
               📝 คลังข้อสอบจากฐานข้อมูล: {activeLesson.title}
             </h3>
 
-            {/* แถบกล่องแบนเนอร์โชว์ผลคะแนนรวม จะเด้งโผล่ทันทีที่ประมวลผลคำตอบสำเร็จ */}
+            {/* แถบกล่องแบนเนอร์โชว์ผลคะแนนรวม */}
             {quizSubmitted && (
               <div style={{ backgroundColor: '#e6f7ff', border: '1px solid #91d5ff', padding: '1.2rem', borderRadius: '10px', textAlign: 'center', marginBottom: '1.5rem', boxShadow: '0 4px 10px rgba(145,213,255,0.2)' }}>
                 <span style={{ fontSize: '1.1rem', color: '#0050b3', fontWeight: 'bold', display: 'block', marginBottom: '0.2rem' }}>📊 สรุปผลการทดสอบเรียลไทม์</span>
