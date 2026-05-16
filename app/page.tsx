@@ -1,6 +1,6 @@
 'use client';
 import { useState } from 'react';
-import { supabase } from '../supabaseClient'; // นำเข้ากุญแจเชื่อมต่อหลังบ้าน Supabase ตัวจริง
+import { supabase } from '../supabaseClient'; // เชื่อมต่อตัวกุญแจหลัก Supabase ตัวจริง
 
 export default function HomePage() {
   // ระบบจัดการสถานะป็อปอัป และตัวแปรเก็บข้อมูลฟอร์มสมัครเรียน
@@ -12,6 +12,7 @@ export default function HomePage() {
   // ตัวแปรรับค่าจากฟอร์มแจ้งโอนเงิน
   const [studentName, setStudentName] = useState('');
   const [studentPhone, setStudentPhone] = useState('');
+  const [slipFile, setSlipFile] = useState<File | null>(null); // ตัวแปรเก็บไฟล์รูปภาพสลิป
   const [statusMessage, setStatusMessage] = useState('');
 
   // ข้อมูลคอร์สเรียนเตรียมสอบข้าราชการเชิงกลยุทธ์การตลาด
@@ -48,34 +49,69 @@ export default function HomePage() {
     }
   };
 
-  // ฟังก์ชันหลักส่งข้อมูลใบสมัครยิงตรงเข้าฐานข้อมูล Supabase หลังบ้านตัวจริง
+  // ฟังก์ชันหลักดักจับและจัดการไฟล์รูปภาพตอนที่นักเรียนเลือกไฟล์สลิป
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      setSlipFile(e.target.files[0]);
+    }
+  };
+
+  // ฟังก์ชันจัดกลุ่มส่งข้อมูลใบสมัครยิงตรงเข้าฐานข้อมูลตัวเต็ม
   const handlePaymentSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setStatusMessage('⏳ กำลังส่งข้อมูลสลิปและบันทึกใบสมัคร...');
+    if (!slipFile) {
+      setStatusMessage('❌ กรุณาแนบภาพสลิปการโอนเงินก่อนส่งระบบครับ');
+      return;
+    }
+
+    setStatusMessage('⏳ กำลังอัปโหลดรูปภาพสลิปเข้าสู่ระบบคลาวด์...');
+    let imageUrl = '';
 
     try {
-      // สั่งยิงข้อมูล 3 ค่าหลัก เข้าตารางที่ชื่อว่า enrollment
-      const { data, error } = await supabase
+      // 1. ตั้งชื่อไฟล์ใหม่ด้วยเบอร์โทร + เวลาปัจจุบันเพื่อไม่ให้ชื่อไฟล์ซ้ำกันในคลัง
+      const fileExt = slipFile.name.split('.').pop();
+      const fileName = `${studentPhone}_${Date.now()}.${fileExt}`;
+
+      // 2. สั่งยิงไฟล์รูปภาพตัวจริงเข้าสู่ Bucket หลังบ้านที่ชื่อว่า slips
+      const { data: uploadData, error: uploadError } = await supabase.storage
+        .from('slips')
+        .upload(fileName, slipFile);
+
+      if (uploadError) throw uploadError;
+
+      // 3. เมื่ออัปโหลดภาพสำเร็จ สั่งให้ Supabase เจนเนอเรตลิงก์รูปภาพสาธารณะ (Public URL) กลับมาใช้งาน
+      const { data: publicUrlData } = supabase.storage
+        .from('slips')
+        .getPublicUrl(fileName);
+
+      imageUrl = publicUrlData.publicUrl;
+
+      setStatusMessage('⏳ บันทึกรูปภาพสำเร็จ กำลังบันทึกข้อมูลใบสมัครเรียน...');
+
+      // 4. สั่งเซฟข้อมูลอักษรพร้อมตัว "ลิงก์รูปภาพสลิป" ตัวจริงลงตาราง enrollment
+      const { error: insertError } = await supabase
         .from('enrollment')
         .insert([
           {
             student_name: studentName,
             student_phone: studentPhone,
-            course_title: selectedCourse
+            course_title: selectedCourse,
+            slip_url: imageUrl // ลิงก์รูปภาพสลิปตัวจริงจะถูกเก็บลงตารางทันที
           }
         ]);
 
-      if (error) throw error;
+      if (insertError) throw insertError;
 
-      setStatusMessage('✅ บันทึกใบสมัครสำเร็จ! เจ้าหน้าที่จะตรวจสอบและเปิดระบบห้องเรียนให้ภายใน 15 นาทีครับ');
+      setStatusMessage('✅ บันทึกใบสมัครสำเร็จและอัปโหลดสลิปเรียบร้อย! เจ้าหน้าที่จะตรวจสอบยอดเงินภายใน 15 นาทีครับ');
       
       // ล้างข้อมูลในฟอร์มเมื่อส่งเสร็จ
       setStudentName('');
       setStudentPhone('');
+      setSlipFile(null);
       setTimeout(() => {
         setSelectedCourse(null);
         setStatusMessage('');
-      }, 3000);
+      }, 4000);
 
     } catch (error: any) {
       console.error(error);
@@ -85,7 +121,6 @@ export default function HomePage() {
 
   return (
     <div style={{ fontFamily: '"ChulaCharasNew", "Helvetica Neue", sans-serif', color: '#333', backgroundColor: '#fdfdfd', minHeight: '100vh' }}>
-      
       {/* 1. แถบเมนูด้านบน (Navbar) */}
       <nav style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '1rem 2rem', backgroundColor: '#ffffff', boxShadow: '0 2px 4px rgba(0,0,0,0.05)', position: 'sticky', top: 0, zIndex: 100 }}>
         <div style={{ fontWeight: 'bold', fontSize: '1.5rem', color: '#0070f3', display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }} onClick={() => window.location.href = '/'}>
@@ -128,6 +163,7 @@ export default function HomePage() {
           </a>
         </div>
       </header>
+
       {/* 3. ส่วนแสดงรายชื่อคอร์สเรียน (Course Grid) */}
       <main style={{ maxWidth: '1200px', margin: '0 auto', padding: '4rem 2rem' }}>
         <div style={{ textAlign: 'center', marginBottom: '3rem' }}>
@@ -170,7 +206,7 @@ export default function HomePage() {
           ))}
         </div>
 
-        {/* ระบบแจ้งชำระเงินและฟอร์มยิงข้อมูลเข้าฐานข้อมูล Supabase */}
+        {/* ระบบแจ้งชำระเงินและฟอร์มยิงข้อมูลภาพเข้าคลาวด์ */}
         {selectedCourse && (
           <div style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', justifyContent: 'center', zIndex: 1000, alignItems: 'center' }}>
             <div style={{ backgroundColor: 'white', padding: '2rem', borderRadius: '16px', maxWidth: '500px', width: '90%', maxHeight: '90vh', overflowY: 'auto', boxShadow: '0 20px 40px rgba(0,0,0,0.2)' }}>
@@ -184,14 +220,13 @@ export default function HomePage() {
                 <p style={{ margin: 0 }}>ชื่อบัญชี: <strong>บจก. บ้านเด็กติวเตอร์ (ประเทศไทย)</strong></p>
               </div>
 
-              {/* แสดงข้อความสถานะการบันทึกฐานข้อมูล */}
+              {/* แสดงข้อความสถานะการทำงานหลังบ้าน */}
               {statusMessage && (
                 <div style={{ padding: '1rem', marginBottom: '1rem', borderRadius: '8px', backgroundColor: statusMessage.includes('❌') ? '#fff0f0' : '#f6ffed', border: statusMessage.includes('❌') ? '1px solid #ffa39e' : '1px solid #b7eb8f', color: '#333', fontSize: '0.95rem', fontWeight: 'bold' }}>
                   {statusMessage}
                 </div>
               )}
 
-              {/* ฟอร์มรับข้อมูลเชื่อมโยง State ไปส่งหา Supabase */}
               <form onSubmit={handlePaymentSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1rem', textAlign: 'left' }}>
                 <div>
                   <label style={{ display: 'block', marginBottom: '0.3rem', fontWeight: 'bold', fontSize: '0.9rem' }}>ชื่อ-นามสกุล ผู้สมัคร:</label>
@@ -217,7 +252,14 @@ export default function HomePage() {
                 </div>
                 <div>
                   <label style={{ display: 'block', marginBottom: '0.3rem', fontWeight: 'bold', fontSize: '0.9rem' }}>แนบภาพสลิปการโอนเงิน:</label>
-                  <input type="file" required accept="image/*" style={{ width: '100%', padding: '0.5rem 0' }} />
+                  {/* ผูกฟังก์ชันดักจับไฟล์รูปภาพสลิป */}
+                  <input 
+                    type="file" 
+                    required 
+                    accept="image/*" 
+                    onChange={handleFileChange}
+                    style={{ width: '100%', padding: '0.5rem 0' }} 
+                  />
                 </div>
                 
                 <div style={{ display: 'flex', gap: '0.5rem', marginTop: '1rem' }}>
@@ -229,7 +271,7 @@ export default function HomePage() {
           </div>
         )}
 
-        {/* ป๊อปอัปฟอร์มเข้าสู่ระบบนักเรียน (Student Login Modal) */}
+        {/* ป๊อปอัปฟอร์มเข้าสู่ระบบนักเรียน */}
         {showLoginModal && (
           <div style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', justifyContent: 'center', zIndex: 1000, alignItems: 'center' }}>
             <div style={{ backgroundColor: 'white', padding: '2.5rem', borderRadius: '16px', maxWidth: '400px', width: '90%', textAlign: 'center', boxShadow: '0 20px 40px rgba(0,0,0,0.2)' }}>
@@ -263,7 +305,7 @@ export default function HomePage() {
         )}
       </main>
 
-      {/* 4. ส่วนท้ายเว็บ (Footer) */}
+      {/* 4. ส่วนท้ายเว็บ */}
       <footer style={{ backgroundColor: '#111', color: '#888', padding: '3rem 2rem', textAlign: 'center', borderTop: '1px solid #222' }}>
         <p style={{ margin: 0, fontSize: '0.95rem' }}>© 2026 บ้านเด็กติวเตอร์ (Bandektutor) - สงวนลิขสิทธิ์ทุกประการ</p>
         <p style={{ marginTop: '0.5rem', fontSize: '0.85rem', color: '#555' }}>พัฒนาโดยแพลตฟอร์ม Next.js + Node.js ระดับมืออาชีพ</p>
