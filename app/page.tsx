@@ -1,22 +1,20 @@
 'use client';
 import { useState } from 'react';
-import { supabase } from '../supabaseClient'; // นำเข้าตัวเชื่อมฐานข้อมูลตัวจริง
+import { supabase } from '../supabaseClient';
 
 export default function HomePage() {
-  // ระบบจัดการสถานะป็อปอัป และระบบล็อกอินตรวจเช็คฐานข้อมูล
   const [selectedCourse, setSelectedCourse] = useState<string | null>(null);
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [username, setUsername] = useState(''); // ใช้เก็บรหัสเบอร์โทรศัพท์ตอนพิมพ์
-  const [displayStudentName, setDisplayStudentName] = useState(''); // ใช้แสดงชื่อจริงเมื่อเช็คผ่าน
+  const [username, setUsername] = useState('');
+  const [displayStudentName, setDisplayStudentName] = useState('');
   
-  // ตัวแปรรับค่าฟอร์มสมัครเรียน
   const [studentName, setStudentName] = useState('');
   const [studentPhone, setStudentPhone] = useState('');
   const [statusMessage, setStatusMessage] = useState('');
-  const [loginErrorMessage, setLoginErrorMessage] = useState(''); // เก็บข้อความเตือนตอนล็อกอินผิดพลาด
+  const [loginErrorMessage, setLoginErrorMessage] = useState('');
 
-  // ข้อมูลคอร์สเรียนเตรียมสอบข้าราชการเชิงกลยุทธ์การตลาด
+  // 📋 เพิ่มคอร์สติวนายสิบตำรวจ 2 คอร์สใหม่เข้าไปในระบบคลังหน้าแรกอย่างเป็นทางการ
   const courses = [
     {
       id: 1,
@@ -38,14 +36,26 @@ export default function HomePage() {
       description: 'ติวเจาะลึกเก็งข้อสอบตรงประเด็นสำหรับสอบท้องถิ่นโดยเฉพาะ รวม พ.ร.บ. จัดตั้งท้องถิ่นครบทุกฉบับ พร้อมแนวข้อสอบเก่า',
       price: 2500,
       badge: 'แนะนำ ⭐'
+    },
+    {
+      id: 4,
+      title: '👮 คอร์สติวสอบ นายสิบตำรวจ (นสต. สายปราบปราม)',
+      description: 'ติวเข้ม 6 วิชาหลัก ความสามารถทั่วไป, ภาษาไทย, ภาษาอังกฤษ, กฎหมายที่ประชาชนควรรู้, คอมพิวเตอร์ และเทคโนโลยีสารสนเทศ เจาะข้อสอบเก่าแน่น ๆ',
+      price: 1990,
+      badge: 'มาใหม่ 🚨'
+    },
+    {
+      id: 5,
+      title: '💼 คอร์สติวสอบ นายสิบตำรวจ (สายอำนวยการและสนับสนุน)',
+      description: 'เจาะลึกเนื้อหาสำหรับสายอก. โดยเฉพาะ เน้นวิชาสารบรรณ งานธุรการ คอมพิวเตอร์ สังคมวัฒนธรรม จริยธรรม และภาษาต่างประเทศ พร้อมสรุปสูตรลัด',
+      price: 1890,
+      badge: 'แนะนำ 🎯'
     }
   ];
 
-  // ฟังก์ชันวิ่งไปเช็คข้อมูลใน Supabase พร้อมแจกตั๋วจำความจำข้ามหน้าต่างอัตโนมัติ
   const handleLoginSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoginErrorMessage('⏳ กำลังตรวจสอบรายชื่อในฐานข้อมูลหลังบ้าน...');
-
     try {
       const { data, error } = await supabase
         .from('enrollment')
@@ -56,18 +66,13 @@ export default function HomePage() {
       if (error) throw error;
 
       if (data && data.length > 0) {
-        // ดึงข้อมูลของนักเรียนคนแรกในกล่องแถวข้อมูลที่ตรวจเจอ
         const currentStudent = data[0];
-        
         setDisplayStudentName(currentStudent.student_name);
         setIsLoggedIn(true);
         setShowLoginModal(false);
         setLoginErrorMessage('');
-
-        // [จุดอัปเกรดสำคัญสุด] สั่งแจกตั๋วความจำฝังลงเครื่องนักเรียน เพื่อให้เปิดด่านเข้าเรียนได้เลยทันทีไม่ต้องพิมพ์ซ้ำ
         localStorage.setItem('user_phone', currentStudent.student_phone);
         localStorage.setItem('user_name', currentStudent.student_name);
-
       } else {
         setIsLoggedIn(false);
         setLoginErrorMessage('❌ ไม่พบสิทธิ์! เบอร์โทรนี้ยังไม่ได้ลงทะเบียน หรือแอดมินยังไม่ได้กดอนุมัติเข้าเรียนครับ');
@@ -77,7 +82,6 @@ export default function HomePage() {
     }
   };
 
-  // ฟังก์ชันยิงใบสมัครเข้าตาราง enrollment
   const handlePaymentSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setStatusMessage('⏳ กำลังส่งข้อมูลสลิปและบันทึกใบสมัคร...');
@@ -97,7 +101,7 @@ export default function HomePage() {
 
   return (
     <div style={{ fontFamily: '"ChulaCharasNew", "Helvetica Neue", sans-serif', color: '#333', backgroundColor: '#fdfdfd', minHeight: '100vh' }}>
-      {/* 1. แถบเมนูด้านบน (Navbar) แสดงผลต้อนรับด้วยชื่อจริงที่ดึงมาจากฐานข้อมูล */}
+      {/* 1. แถบเมนูด้านบน (Navbar) */}
       <nav style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '1rem 2rem', backgroundColor: '#ffffff', boxShadow: '0 2px 4px rgba(0,0,0,0.05)', position: 'sticky', top: 0, zIndex: 100 }}>
         <div style={{ fontWeight: 'bold', fontSize: '1.5rem', color: '#0070f3', display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }} onClick={() => window.location.href = '/'}>
           🎓 บ้านเด็กติวเตอร์
@@ -106,7 +110,6 @@ export default function HomePage() {
           <span style={{ cursor: 'pointer', color: '#0070f3' }}>หน้าแรก</span>
           <span style={{ cursor: 'pointer', color: '#666' }} onClick={() => window.location.href = '/classroom'}>ห้องเรียนออนไลน์</span>
           
-          {/* เงื่อนไขการแสดงผลเมื่อนักเรียนตรวจสอบสิทธิ์เบอร์โทรศัพท์ผ่านฐานข้อมูลสำเร็จ */}
           {isLoggedIn ? (
             <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
               <span style={{ color: '#28a745', fontWeight: 'bold' }}>👤 สวัสดี, คุณ {displayStudentName}</span>
@@ -133,20 +136,20 @@ export default function HomePage() {
         </div>
       </nav>
 
-      {/* 2. ส่วนโปรโมทหลัก (Hero Section) แท็กเปิดประตูตรงไปยัง /classroom อัจฉริยะ */}
+      {/* 2. ส่วนโปรโมทหลัก (Hero Section) */}
       <header style={{ padding: '5rem 2rem', textAlign: 'center', color: 'white', background: 'linear-gradient(135deg, #0052cc 0%, #00a4ff 100%)' }}>
         <h1 style={{ fontSize: '3rem', marginBottom: '1rem', fontWeight: '800', letterSpacing: '-0.5px' }}>
-          สานฝันเส้นทางข้าราชการกับ "บ้านเด็กติวเตอร์"
+          สานฝันเส้นทางข้าราชการและผู้พิทักษ์สันติราษฎร์
         </h1>
         <p style={{ fontSize: '1.3rem', marginBottom: '2.5rem', opacity: 0.9, maxWidth: '800px', margin: '0 auto 2.5rem auto', lineHeight: '1.6' }}>
-          เปลี่ยนเรื่องยากให้เป็นเรื่องง่าย อ่านเอง 3 เดือน ไม่เท่าติวกับเรา 3 ชั่วโมง อัปเดตเนื้อหาใหม่ล่าสุดปีล่าสุด เพื่ออัตราการสอบผ่านที่สูงที่สุดของคุณ
+          เปลี่ยนเรื่องยากให้เป็นเรื่องง่าย อ่านเอง 3 เดือน ไม่เท่าติวกับเรา 3 ชั่วโมง สรุปเทคนิคคิดเร็วอัพเดทใหม่ล่าสุด เพื่ออัตราการสอบผ่านที่สูงที่สุดของคุณ
         </p>
         <div style={{ display: 'flex', justifyContent: 'center', gap: '1rem' }}>
           <a 
             href="/classroom"
             style={{ backgroundColor: '#fff', color: '#0052cc', border: 'none', padding: '0.8rem 2rem', borderRadius: '30px', fontSize: '1.1rem', fontWeight: 'bold', cursor: 'pointer', boxShadow: '0 4px 14px rgba(0,0,0,0.15)', textDecoration: 'none', display: 'inline-block' }}
           >
-            🚀 คลิกเข้าสู่ห้องเรียนจำลองฟรีวันนี้
+            🚀 คลิกเข้าสู่ห้องเรียนออนไลน์ตัวจริง
           </a>
         </div>
       </header>
@@ -154,7 +157,7 @@ export default function HomePage() {
       {/* 3. ส่วนแสดงรายชื่อคอร์สเรียน (Course Grid) */}
       <main style={{ maxWidth: '1200px', margin: '0 auto', padding: '4rem 2rem' }}>
         <div style={{ textAlign: 'center', marginBottom: '3rem' }}>
-          <h2 style={{ fontSize: '2.2rem', color: '#111', marginBottom: '0.5rem' }}>🎯 คอร์สติวสอบราชการยอดนิยม</h2>
+          <h2 style={{ fontSize: '2.2rem', color: '#111', marginBottom: '0.5rem' }}>🎯 คอร์สติวสอบราชการและตำรวจยอดนิยม</h2>
           <p style={{ color: '#666', fontSize: '1.1rem' }}>เลือกคอร์สที่ใช่เพื่อความสำเร็จในอาชีพข้าราชการของคุณ</p>
         </div>
 
@@ -236,7 +239,7 @@ export default function HomePage() {
           </div>
         )}
 
-        {/* ป๊อปอัปฟอร์มเข้าสู่ระบบนักเรียนเวอร์ชันตรวจสิทธิ์หนาแน่นสูง */}
+        {/* ป๊อปอัปฟอร์มเข้าสู่ระบบนักเรียน */}
         {showLoginModal && (
           <div style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', justifyContent: 'center', zIndex: 1000, alignItems: 'center' }}>
             <div style={{ backgroundColor: 'white', padding: '2.5rem', borderRadius: '16px', maxWidth: '400px', width: '90%', textAlign: 'center', boxShadow: '0 20px 40px rgba(0,0,0,0.2)' }}>
