@@ -1,20 +1,23 @@
 'use client';
 import { useState } from 'react';
-import { supabase } from '../supabaseClient';
+import { supabase } from '../supabaseClient'; // ดึงตัวเชื่อมต่อหลังบ้านตัวจริง
 
 export default function HomePage() {
+  // ระบบจัดการสถานะป็อปอัป และตัวแปรเก็บข้อมูลฟอร์มสมัครเรียน
   const [selectedCourse, setSelectedCourse] = useState<string | null>(null);
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [username, setUsername] = useState('');
-  const [displayStudentName, setDisplayStudentName] = useState('');
+  const [username, setUsername] = useState(''); // เก็บเบอร์โทรศัพท์ตอนล็อกอินพิมพ์
+  const [displayStudentName, setDisplayStudentName] = useState(''); // แสดงชื่อจริงเมื่อเช็คผ่าน
   
+  // ตัวแปรรับค่าจากฟอร์มแจ้งโอนเงิน
   const [studentName, setStudentName] = useState('');
   const [studentPhone, setStudentPhone] = useState('');
+  const [slipFile, setSlipFile] = useState<File | null>(null); // ช่องเก็บไฟล์รูปภาพสลิปจริง
   const [statusMessage, setStatusMessage] = useState('');
   const [loginErrorMessage, setLoginErrorMessage] = useState('');
 
-  // 📋 เพิ่มคอร์สติวนายสิบตำรวจ 2 คอร์สใหม่เข้าไปในระบบคลังหน้าแรกอย่างเป็นทางการ
+  // คลังข้อมูลคอร์สเรียนเตรียมสอบข้าราชการและตำรวจครบถ้วน 5 คอร์สใหญ่
   const courses = [
     {
       id: 1,
@@ -53,6 +56,14 @@ export default function HomePage() {
     }
   ];
 
+  // ฟังก์ชันหลักดักจับไฟล์รูปภาพตอนที่นักเรียนเลือกไฟล์สลิป
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      setSlipFile(e.target.files[0]);
+    }
+  };
+
+  // ฟังก์ชันวิ่งไปเช็คข้อมูลใน Supabase พร้อมแจกตั๋วความจำข้ามหน้าต่างอัตโนมัติ
   const handleLoginSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoginErrorMessage('⏳ กำลังตรวจสอบรายชื่อในฐานข้อมูลหลังบ้าน...');
@@ -73,6 +84,7 @@ export default function HomePage() {
         setLoginErrorMessage('');
         localStorage.setItem('user_phone', currentStudent.student_phone);
         localStorage.setItem('user_name', currentStudent.student_name);
+        localStorage.setItem('user_course', currentStudent.course_title);
       } else {
         setIsLoggedIn(false);
         setLoginErrorMessage('❌ ไม่พบสิทธิ์! เบอร์โทรนี้ยังไม่ได้ลงทะเบียน หรือแอดมินยังไม่ได้กดอนุมัติเข้าเรียนครับ');
@@ -82,19 +94,64 @@ export default function HomePage() {
     }
   };
 
+  // [จุดอัปเกรดสำคัญ] ฟังก์ชันส่งใบสมัครตัวฟูล สั่งอัปโหลดรูปภาพสลิปจริงขึ้น Storage และบันทึกลิงก์คู่รายชื่อ
   const handlePaymentSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setStatusMessage('⏳ กำลังส่งข้อมูลสลิปและบันทึกใบสมัคร...');
+    if (!slipFile) {
+      setStatusMessage('❌ กรุณาแนบภาพสลิปการโอนเงินก่อนส่งระบบครับ');
+      return;
+    }
+
+    setStatusMessage('⏳ กำลังอัปโหลดรูปภาพสลิปเข้าสู่ระบบคลาวด์...');
+    let imageUrl = '';
+
     try {
-      const { error } = await supabase
+      // 1. ตั้งชื่อไฟล์ใหม่ด้วยเบอร์โทร + เวลาปัจจุบันเพื่อไม่ให้ชื่อไฟล์ซ้ำกันในคลังคลาวด์
+      const fileExt = slipFile.name.split('.').pop();
+      const fileName = `${studentPhone}_${Date.now()}.${fileExt}`;
+
+      // 2. สั่งยิงไฟล์รูปภาพตัวจริงเข้าสู่ Bucket หลังบ้านที่ชื่อว่า slips
+      const { data: uploadData, error: uploadError } = await supabase.storage
+        .from('slips')
+        .upload(fileName, slipFile);
+
+      if (uploadError) throw uploadError;
+
+      // 3. ดึงลิงก์รูปภาพสาธารณะ (Public URL) ตัวจริงกลับมาใช้งาน
+      const { data: publicUrlData } = supabase.storage
+        .from('slips')
+        .getPublicUrl(fileName);
+
+      imageUrl = publicUrlData.publicUrl;
+
+      setStatusMessage('⏳ บันทึกรูปภาพสำเร็จ กำลังบันทึกข้อมูลใบสมัครเรียน...');
+
+      // 4. สั่งเซฟข้อมูลอักษรพร้อมตัว "ลิงก์รูปภาพสลิป" ตัวจริงลงตาราง enrollment หลังบ้าน
+      const { error: insertError } = await supabase
         .from('enrollment')
-        .insert([{ student_name: studentName, student_phone: studentPhone, course_title: selectedCourse }]);
-      if (error) throw error;
-      setStatusMessage('✅ บันทึกใบสมัครสำเร็จ! เจ้าหน้าที่จะตรวจสอบและเปิดระบบให้ภายใน 15 นาทีครับ');
+        .insert([
+          {
+            student_name: studentName,
+            student_phone: studentPhone,
+            course_title: selectedCourse,
+            slip_url: imageUrl // บันทึกลิงก์รูปภาพตัวจริงลงฐานข้อมูลอย่างสมบูรณ์แบบ
+          }
+        ]);
+
+      if (insertError) throw insertError;
+
+      setStatusMessage('✅ บันทึกใบสมัครสำเร็จและอัปโหลดสลิปเรียบร้อย! เจ้าหน้าที่จะตรวจสอบยอดเงินภายใน 15 นาทีครับ');
+      
       setStudentName('');
       setStudentPhone('');
-      setTimeout(() => { setSelectedCourse(null); setStatusMessage(''); }, 3000);
+      setSlipFile(null);
+      setTimeout(() => {
+        setSelectedCourse(null);
+        setStatusMessage('');
+      }, 4000);
+
     } catch (error: any) {
+      console.error(error);
       setStatusMessage(`❌ เกิดข้อผิดพลาดหลังบ้าน: ${error.message}`);
     }
   };
@@ -117,6 +174,7 @@ export default function HomePage() {
                 onClick={() => { 
                   localStorage.removeItem('user_phone');
                   localStorage.removeItem('user_name');
+                  localStorage.removeItem('user_course');
                   setIsLoggedIn(false); 
                   setUsername(''); 
                 }} 
@@ -142,7 +200,7 @@ export default function HomePage() {
           สานฝันเส้นทางข้าราชการและผู้พิทักษ์สันติราษฎร์
         </h1>
         <p style={{ fontSize: '1.3rem', marginBottom: '2.5rem', opacity: 0.9, maxWidth: '800px', margin: '0 auto 2.5rem auto', lineHeight: '1.6' }}>
-          เปลี่ยนเรื่องยากให้เป็นเรื่องง่าย อ่านเอง 3 เดือน ไม่เท่าติวกับเรา 3 ชั่วโมง สรุปเทคนิคคิดเร็วอัพเดทใหม่ล่าสุด เพื่ออัตราการสอบผ่านที่สูงที่สุดของคุณ
+          เปลี่ยนเรื่องยากให้เป็นเรื่องง่าย โจทย์ยากแค่ไหนก็ผ่านฉลุยด้วยสูตรลัดเฉพาะตัว ติวจัดเต็มวิชาหลักเพื่อความสำเร็จของคุณวันนี้
         </p>
         <div style={{ display: 'flex', justifyContent: 'center', gap: '1rem' }}>
           <a 
@@ -158,7 +216,7 @@ export default function HomePage() {
       <main style={{ maxWidth: '1200px', margin: '0 auto', padding: '4rem 2rem' }}>
         <div style={{ textAlign: 'center', marginBottom: '3rem' }}>
           <h2 style={{ fontSize: '2.2rem', color: '#111', marginBottom: '0.5rem' }}>🎯 คอร์สติวสอบราชการและตำรวจยอดนิยม</h2>
-          <p style={{ color: '#666', fontSize: '1.1rem' }}>เลือกคอร์สที่ใช่เพื่อความสำเร็จในอาชีพข้าราชการของคุณ</p>
+          <p style={{ color: '#666', fontSize: '1.1rem' }}>เลือกคอร์สที่ใช่เพื่ออนาคตข้าราชการที่มั่นคงของคุณ</p>
         </div>
 
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(340px, 1fr))', gap: '2rem' }}>
@@ -196,7 +254,7 @@ export default function HomePage() {
           ))}
         </div>
 
-        {/* ระบบแจ้งชำระเงินและสมัครเรียนพร้อมฟอร์มรับค่า */}
+        {/* ระบบแจ้งชำระเงินและฟอร์มรับรูปสลิปส่งเข้าคลาวด์ Storage */}
         {selectedCourse && (
           <div style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', justifyContent: 'center', zIndex: 1000, alignItems: 'center' }}>
             <div style={{ backgroundColor: 'white', padding: '2rem', borderRadius: '16px', maxWidth: '500px', width: '90%', maxHeight: '90vh', overflowY: 'auto', boxShadow: '0 20px 40px rgba(0,0,0,0.2)' }}>
@@ -211,7 +269,7 @@ export default function HomePage() {
               </div>
 
               {statusMessage && (
-                <div style={{ padding: '1rem', marginBottom: '1rem', borderRadius: '8px', backgroundColor: '#f6ffed', border: '1px solid #b7eb8f', color: '#333', fontSize: '0.95rem', fontWeight: 'bold' }}>
+                <div style={{ padding: '1rem', marginBottom: '1rem', borderRadius: '8px', backgroundColor: statusMessage.includes('❌') ? '#fff0f0' : '#f6ffed', border: statusMessage.includes('❌') ? '1px solid #ffa39e' : '1px solid #b7eb8f', color: '#333', fontSize: '0.95rem', fontWeight: 'bold' }}>
                   {statusMessage}
                 </div>
               )}
@@ -227,7 +285,8 @@ export default function HomePage() {
                 </div>
                 <div>
                   <label style={{ display: 'block', marginBottom: '0.3rem', fontWeight: 'bold', fontSize: '0.9rem' }}>แนบภาพสลิปการโอนเงิน:</label>
-                  <input type="file" required accept="image/*" style={{ width: '100%', padding: '0.5rem 0' }} />
+                  {/* ผูกฟังก์ชัน onChange เพื่อดักจับไฟล์รูปภาพสลิปจริงของคอร์สตำรวจ */}
+                  <input type="file" required accept="image/*" onChange={handleFileChange} style={{ width: '100%', padding: '0.5rem 0' }} />
                 </div>
                 
                 <div style={{ display: 'flex', gap: '0.5rem', marginTop: '1rem' }}>
