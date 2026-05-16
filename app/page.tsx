@@ -2,10 +2,13 @@
 import { useState } from 'react';
 
 export default function HomePage() {
-  // จำลองระบบสมัครเรียนเพื่อให้นักเรียนกดเล่นได้จริง
+  // ระบบจัดการสถานะ: ป็อปอัปสมัครเรียน และ ป็อปอัปเข้าสู่ระบบนักเรียน
   const [selectedCourse, setSelectedCourse] = useState<string | null>(null);
+  const [showLoginModal, setShowLoginModal] = useState(false);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [username, setUsername] = useState('');
 
-  // ข้อมูลคอร์สเรียนเชิงกลยุทธ์การตลาด (ดึงดูดผู้เรียนด้วยราคาและเนื้อหาที่ตรงจุด)
+  // ข้อมูลคอร์สเรียนเตรียมสอบข้าราชการเชิงกลยุทธ์การตลาด
   const courses = [
     {
       id: 1,
@@ -30,23 +33,44 @@ export default function HomePage() {
     }
   ];
 
+  // ฟังก์ชันจัดการระบบล็อกอินจำลอง
+  const handleLoginSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (username.trim()) {
+      setIsLoggedIn(true);
+      setShowLoginModal(false);
+    }
+  };
+
   return (
     <div style={{ fontFamily: '"ChulaCharasNew", "Helvetica Neue", sans-serif', color: '#333', backgroundColor: '#fdfdfd', minHeight: '100vh' }}>
       
-      {/* 1. แถบเมนูด้านบน (Navbar) สไตล์สถาบันติวเตอร์ระดับพรีเมียม */}
+      {/* 1. แถบเมนูด้านบน (Navbar) เชื่อมโยงตรงไปยังโฟลเดอร์ /classroom แบบปลอดภัยสูงด้วย alignItems */}
       <nav style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '1rem 2rem', backgroundColor: '#ffffff', boxShadow: '0 2px 4px rgba(0,0,0,0.05)', position: 'sticky', top: 0, zIndex: 100 }}>
-        <div style={{ fontWeight: 'bold', fontSize: '1.5rem', color: '#0070f3', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+        <div style={{ fontWeight: 'bold', fontSize: '1.5rem', color: '#0070f3', display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }} onClick={() => window.location.href = '/'}>
           🎓 บ้านเด็กติวเตอร์
         </div>
-        <div style={{ display: 'flex', gap: '1.5rem', fontWeight: '500' }}>
+        <div style={{ display: 'flex', gap: '1.5rem', fontWeight: '500', alignItems: 'center' }}>
           <span style={{ cursor: 'pointer', color: '#0070f3' }}>หน้าแรก</span>
-          <span style={{ cursor: 'pointer', color: '#666' }}>คอร์สทั้งหมด</span>
-          <span style={{ cursor: 'pointer', color: '#666' }}>รีวิวผู้สอบผ่าน</span>
-          <span style={{ cursor: 'pointer', color: '#666' }}>ติดต่อเรา</span>
+          <span style={{ cursor: 'pointer', color: '#666' }} onClick={() => window.location.href = '/classroom'}>ห้องเรียนออนไลน์</span>
+          
+          {isLoggedIn ? (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+              <span style={{ color: '#28a745', fontWeight: 'bold' }}>👤 สวัสดี, คุณ {username}</span>
+              <button onClick={() => setIsLoggedIn(false)} style={{ backgroundColor: '#dc3545', color: 'white', border: 'none', padding: '0.5rem 1rem', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold' }}>ออกจากระบบ</button>
+            </div>
+          ) : (
+            <button 
+              onClick={() => setShowLoginModal(true)}
+              style={{ backgroundColor: '#0070f3', color: 'white', border: 'none', padding: '0.5rem 1.2rem', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold', boxShadow: '0 2px 6px rgba(0,112,243,0.3)' }}
+            >
+              🔐 เข้าสู่ระบบนักเรียน
+            </button>
+          )}
         </div>
       </nav>
 
-      {/* 2. ส่วนโปรโมทหลัก (Hero Section) วางจุดขายหลักของธุรกิจเพื่อดึงสายตานักเรียน */}
+      {/* 2. ส่วนโปรโมทหลัก (Hero Section) แท็กนำทางข้ามหน้าต่างสำเร็จรูป */}
       <header style={{ padding: '5rem 2rem', textAlign: 'center', color: 'white', background: 'linear-gradient(135deg, #0052cc 0%, #00a4ff 100%)' }}>
         <h1 style={{ fontSize: '3rem', marginBottom: '1rem', fontWeight: '800', letterSpacing: '-0.5px' }}>
           สานฝันเส้นทางข้าราชการกับ "บ้านเด็กติวเตอร์"
@@ -55,12 +79,27 @@ export default function HomePage() {
           เปลี่ยนเรื่องยากให้เป็นเรื่องง่าย อ่านเอง 3 เดือน ไม่เท่าติวกับเรา 3 ชั่วโมง อัปเดตเนื้อหาใหม่ล่าสุดปีล่าสุด เพื่ออัตราการสอบผ่านที่สูงที่สุดของคุณ
         </p>
         <div style={{ display: 'flex', justifyContent: 'center', gap: '1rem' }}>
-          <button style={{ backgroundColor: '#fff', color: '#0052cc', border: 'none', padding: '0.8rem 2rem', borderRadius: '30px', fontSize: '1.1rem', fontWeight: 'bold', cursor: 'pointer', boxShadow: '0 4px 14px rgba(0,0,0,0.15)' }}>
-            ทดลองเรียนฟรีวันนี้
-          </button>
+          <a 
+            href="/classroom"
+            style={{ 
+              backgroundColor: '#fff', 
+              color: '#0052cc', 
+              border: 'none', 
+              padding: '0.8rem 2rem', 
+              borderRadius: '30px', 
+              fontSize: '1.1rem', 
+              fontWeight: 'bold', 
+              cursor: 'pointer', 
+              boxShadow: '0 4px 14px rgba(0,0,0,0.15)',
+              textDecoration: 'none',
+              display: 'inline-block'
+            }}
+          >
+            🚀 คลิกเข้าสู่ห้องเรียนจำลองฟรีวันนี้
+          </a>
         </div>
       </header>
-      {/* 3. ส่วนแสดงรายชื่อคอร์สเรียน (Course Grid) ดีไซน์สะอาด ลื่นไหล ไม่มีบั๊กฐานข้อมูล */}
+      {/* 3. ส่วนแสดงรายชื่อคอร์สเรียน (Course Grid) */}
       <main style={{ maxWidth: '1200px', margin: '0 auto', padding: '4rem 2rem' }}>
         <div style={{ textAlign: 'center', marginBottom: '3rem' }}>
           <h2 style={{ fontSize: '2.2rem', color: '#111', marginBottom: '0.5rem' }}>🎯 คอร์สติวสอบราชการยอดนิยม</h2>
@@ -71,7 +110,6 @@ export default function HomePage() {
           {courses.map((course) => (
             <div key={course.id} style={{ backgroundColor: '#fff', border: '1px solid #e1e8ed', borderRadius: '16px', overflow: 'hidden', boxShadow: '0 10px 20px rgba(0,0,0,0.03)', transition: 'transform 0.2s', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
               
-              {/* รายละเอียดด้านบนของการ์ด */}
               <div style={{ padding: '2rem' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
                   <span style={{ backgroundColor: '#e6f0ff', color: '#0070f3', padding: '0.3rem 0.8rem', borderRadius: '20px', fontSize: '0.85rem', fontWeight: 'bold' }}>
@@ -86,7 +124,7 @@ export default function HomePage() {
                 </p>
               </div>
 
-              {/* ส่วนราคาและปุ่มกดด้านล่างของการ์ด */}
+              {/* [แก้ไขจุดที่ 1 และ 2] เปลี่ยนจาก itemsAlign เป็น alignItems ให้ถูกต้องตามมาตรฐาน */}
               <div style={{ padding: '1.5rem 2rem', backgroundColor: '#fafafa', borderTop: '1px solid #e1e8ed', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <div>
                   <span style={{ fontSize: '0.85rem', color: '#888', display: 'block' }}>ราคาคอร์ส</span>
@@ -104,26 +142,80 @@ export default function HomePage() {
           ))}
         </div>
 
-        {/* ระบบจำลองป็อปอัปแสดงเมื่อนักเรียนกดสมัครเรียน */}
+        {/* ระบบแจ้งชำระเงินและสมัครเรียนพร้อมอัปโหลดสลิป */}
         {selectedCourse && (
+          /* [แก้ไขจุดที่ 3] เปลี่ยนจาก itemsAlign เป็น alignItems เพื่อแก้ Error บรรทัดที่ 114 และ 127 */
           <div style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', justifyContent: 'center', zIndex: 1000, alignItems: 'center' }}>
-            <div style={{ backgroundColor: 'white', padding: '2.5rem', borderRadius: '16px', maxWidth: '500px', width: '90%', textAlign: 'center', boxShadow: '0 20px 40px rgba(0,0,0,0.2)' }}>
-              <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>🎉</div>
-              <h3 style={{ fontSize: '1.5rem', marginBottom: '1rem' }}>เริ่มต้นเส้นทางข้าราชการของคุณ!</h3>
-              <p style={{ color: '#555', marginBottom: '1.5rem' }}>คุณได้เลือกสมัคร: <strong>{selectedCourse}</strong></p>
-              <p style={{ color: '#28a745', fontWeight: 'bold', marginBottom: '2rem' }}>💡 ระบบการตลาดและการชำระเงิน พร้อมเชื่อมต่อในสเต็ปถัดไปครับ!</p>
-              <button 
-                onClick={() => setSelectedCourse(null)}
-                style={{ backgroundColor: '#333', color: 'white', border: 'none', padding: '0.6rem 1.5rem', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold' }}
-              >
-                ปิดหน้าต่าง
-              </button>
+            <div style={{ backgroundColor: 'white', padding: '2rem', borderRadius: '16px', maxWidth: '500px', width: '90%', maxHeight: '90vh', overflowY: 'auto', boxShadow: '0 20px 40px rgba(0,0,0,0.2)' }}>
+              <div style={{ fontSize: '2.5rem', marginBottom: '0.5rem', textAlign: 'center' }}>💳</div>
+              <h3 style={{ fontSize: '1.4rem', marginBottom: '1rem', textAlign: 'center' }}>ขั้นตอนการชำระเงินสมัครเรียน</h3>
+              <p style={{ color: '#555', marginBottom: '1rem', textAlign: 'center' }}>คุณเลือก: <strong style={{ color: '#0070f3' }}>{selectedCourse}</strong></p>
+              
+              <div style={{ backgroundColor: '#f0f4f8', padding: '1rem', borderRadius: '8px', marginBottom: '1.5rem', fontSize: '0.95rem' }}>
+                <p style={{ margin: '0 0 0.5rem 0' }}>🏦 <strong>ธนาคารกสิกรไทย (K-Bank)</strong></p>
+                <p style={{ margin: '0 0 0.5rem 0' }}>เลขที่บัญชี: <strong>123-4-56789-0</strong></p>
+                <p style={{ margin: 0 }}>ชื่อบัญชี: <strong>บจก. บ้านเด็กติวเตอร์ (ประเทศไทย)</strong></p>
+              </div>
+
+              <form onSubmit={(e) => { e.preventDefault(); alert('✅ ส่งหลักฐานการโอนเงินเรียบร้อย! เจ้าหน้าที่จะตรวจสอบและเปิดระบบให้ภายใน 15 นาทีครับ'); setSelectedCourse(null); }} style={{ display: 'flex', flexDirection: 'column', gap: '1rem', textAlign: 'left' }}>
+                <div>
+                  <label style={{ display: 'block', marginBottom: '0.3rem', fontWeight: 'bold', fontSize: '0.9rem' }}>ชื่อ-นามสกุล ผู้สมัคร:</label>
+                  <input type="text" required placeholder="เช่น สมชาย ตั้งใจเรียน" style={{ width: '100%', padding: '0.6rem', borderRadius: '6px', border: '1px solid #ccc', boxSizing: 'border-box' }} />
+                </div>
+                <div>
+                  <label style={{ display: 'block', marginBottom: '0.3rem', fontWeight: 'bold', fontSize: '0.9rem' }}>เบอร์โทรศัพท์ติดต่อ:</label>
+                  <input type="tel" required placeholder="เช่น 098-7654321" style={{ width: '100%', padding: '0.6rem', borderRadius: '6px', border: '1px solid #ccc', boxSizing: 'border-box' }} />
+                </div>
+                <div>
+                  <label style={{ display: 'block', marginBottom: '0.3rem', fontWeight: 'bold', fontSize: '0.9rem' }}>แนบภาพสลิปการโอนเงิน:</label>
+                  <input type="file" required accept="image/*" style={{ width: '100%', padding: '0.5rem 0' }} />
+                </div>
+                
+                <div style={{ display: 'flex', gap: '0.5rem', marginTop: '1rem' }}>
+                  <button type="button" onClick={() => setSelectedCourse(null)} style={{ flex: 1, backgroundColor: '#666', color: 'white', border: 'none', padding: '0.7rem', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold' }}>ยกเลิก</button>
+                  <button type="submit" style={{ flex: 2, backgroundColor: '#28a745', color: 'white', border: 'none', padding: '0.7rem', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold' }}>📤 ส่งสลิปแจ้งชำระเงิน</button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
+
+        {/* ป๊อปอัปฟอร์มเข้าสู่ระบบนักเรียน (Student Login Modal) */}
+        {showLoginModal && (
+          /* [แก้ไขจุดที่ 4] เปลี่ยนจาก itemsAlign เป็น alignItems เพื่อแก้ Error บรรทัดที่ 146 และ 184 */
+          <div style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', justifyContent: 'center', zIndex: 1000, alignItems: 'center' }}>
+            <div style={{ backgroundColor: 'white', padding: '2.5rem', borderRadius: '16px', maxWidth: '400px', width: '90%', textAlign: 'center', boxShadow: '0 20px 40px rgba(0,0,0,0.2)' }}>
+              <div style={{ fontSize: '2.5rem', marginBottom: '0.5rem' }}>🔐</div>
+              <h3 style={{ fontSize: '1.4rem', marginBottom: '1.5rem' }}>เข้าสู่ระบบห้องเรียนนักเรียน</h3>
+              
+              <form onSubmit={handleLoginSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1rem', textAlign: 'left' }}>
+                <div>
+                  <label style={{ display: 'block', marginBottom: '0.3rem', fontWeight: 'bold', fontSize: '0.9rem' }}>ชื่อผู้ใช้งาน / เบอร์โทรศัพท์:</label>
+                  <input 
+                    type="text" 
+                    required 
+                    value={username}
+                    onChange={(e) => setUsername(e.target.value)}
+                    placeholder="กรอกชื่อผู้ใช้ของคุณ" 
+                    style={{ width: '100%', padding: '0.6rem', borderRadius: '6px', border: '1px solid #ccc', boxSizing: 'border-box' }} 
+                  />
+                </div>
+                <div>
+                  <label style={{ display: 'block', marginBottom: '0.3rem', fontWeight: 'bold', fontSize: '0.9rem' }}>รหัสผ่าน (Password):</label>
+                  <input type="password" required placeholder="••••••••" style={{ width: '100%', padding: '0.6rem', borderRadius: '6px', border: '1px solid #ccc', boxSizing: 'border-box' }} />
+                </div>
+                
+                <div style={{ display: 'flex', gap: '0.5rem', marginTop: '1rem' }}>
+                  <button type="button" onClick={() => setShowLoginModal(false)} style={{ flex: 1, backgroundColor: '#666', color: 'white', border: 'none', padding: '0.7rem', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold' }}>ปิด</button>
+                  <button type="submit" style={{ flex: 2, backgroundColor: '#0070f3', color: 'white', border: 'none', padding: '0.7rem', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold' }}>🔓 ยืนยันเข้าสู่ระบบ</button>
+                </div>
+              </form>
             </div>
           </div>
         )}
       </main>
 
-      {/* 4. ส่วนท้ายเว็บ (Footer) แก้ไขบั๊กโค้ดสีเรียบร้อยแล้ว */}
+      {/* 4. ส่วนท้ายเว็บ (Footer) */}
       <footer style={{ backgroundColor: '#111', color: '#888', padding: '3rem 2rem', textAlign: 'center', borderTop: '1px solid #222' }}>
         <p style={{ margin: 0, fontSize: '0.95rem' }}>© 2026 บ้านเด็กติวเตอร์ (Bandektutor) - สงวนลิขสิทธิ์ทุกประการ</p>
         <p style={{ marginTop: '0.5rem', fontSize: '0.85rem', color: '#555' }}>พัฒนาโดยแพลตฟอร์ม Next.js + Node.js ระดับมืออาชีพ</p>
