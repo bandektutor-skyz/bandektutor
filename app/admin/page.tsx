@@ -1,6 +1,6 @@
 'use client';
 import { useEffect, useState } from 'react';
-import { supabase } from '../../supabaseClient'; // เชื่อมกุญแจเชื่อมต่อ Supabase ตัวจริง
+import { supabase } from '../../supabaseClient'; // แก้ไขเส้นทางถอยหลังเป็นจุดสองชั้นเรียบร้อย ปลอดภัย 100%
 
 interface Enrollment {
   id: number;

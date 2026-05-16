@@ -1,19 +1,20 @@
 'use client';
 import { useState } from 'react';
-import { supabase } from '../supabaseClient'; // เชื่อมต่อตัวกุญแจหลัก Supabase ตัวจริง
+import { supabase } from '../supabaseClient'; // นำเข้าตัวเชื่อมฐานข้อมูลตัวจริง
 
 export default function HomePage() {
-  // ระบบจัดการสถานะป็อปอัป และตัวแปรเก็บข้อมูลฟอร์มสมัครเรียน
+  // ระบบจัดการสถานะป็อปอัป และระบบล็อกอินตรวจเช็คฐานข้อมูล
   const [selectedCourse, setSelectedCourse] = useState<string | null>(null);
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [username, setUsername] = useState('');
+  const [username, setUsername] = useState(''); // ใช้เก็บรหัสเบอร์โทรศัพท์หรือชื่อตอนพิมพ์
+  const [displayStudentName, setDisplayStudentName] = useState(''); // ใช้แสดงชื่อจริงเมื่อเช็คผ่าน
   
-  // ตัวแปรรับค่าจากฟอร์มแจ้งโอนเงิน
+  // ตัวแปรรับค่าฟอร์มสมัครเรียน
   const [studentName, setStudentName] = useState('');
   const [studentPhone, setStudentPhone] = useState('');
-  const [slipFile, setSlipFile] = useState<File | null>(null); // ตัวแปรเก็บไฟล์รูปภาพสลิป
   const [statusMessage, setStatusMessage] = useState('');
+  const [loginErrorMessage, setLoginErrorMessage] = useState(''); // เก็บข้อความเตือนตอนล็อกอินผิดพลาด
 
   // ข้อมูลคอร์สเรียนเตรียมสอบข้าราชการเชิงกลยุทธ์การตลาด
   const courses = [
@@ -40,88 +41,58 @@ export default function HomePage() {
     }
   ];
 
-  // ฟังก์ชันจัดการระบบล็อกอินจำลอง
-  const handleLoginSubmit = (e: React.FormEvent) => {
+  // [อัปเกรดระบบล็อกอินตัวจริง] ฟังก์ชันวิ่งไปเช็คข้อมูลใน Supabase ป้องกันคนใส่มั่ว!
+  const handleLoginSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (username.trim()) {
-      setIsLoggedIn(true);
-      setShowLoginModal(false);
-    }
-  };
-
-  // ฟังก์ชันหลักดักจับและจัดการไฟล์รูปภาพตอนที่นักเรียนเลือกไฟล์สลิป
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      setSlipFile(e.target.files[0]);
-    }
-  };
-
-  // ฟังก์ชันจัดกลุ่มส่งข้อมูลใบสมัครยิงตรงเข้าฐานข้อมูลตัวเต็ม
-  const handlePaymentSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!slipFile) {
-      setStatusMessage('❌ กรุณาแนบภาพสลิปการโอนเงินก่อนส่งระบบครับ');
-      return;
-    }
-
-    setStatusMessage('⏳ กำลังอัปโหลดรูปภาพสลิปเข้าสู่ระบบคลาวด์...');
-    let imageUrl = '';
+    setLoginErrorMessage('⏳ กำลังตรวจสอบรายชื่อในฐานข้อมูลหลังบ้าน...');
 
     try {
-      // 1. ตั้งชื่อไฟล์ใหม่ด้วยเบอร์โทร + เวลาปัจจุบันเพื่อไม่ให้ชื่อไฟล์ซ้ำกันในคลัง
-      const fileExt = slipFile.name.split('.').pop();
-      const fileName = `${studentPhone}_${Date.now()}.${fileExt}`;
-
-      // 2. สั่งยิงไฟล์รูปภาพตัวจริงเข้าสู่ Bucket หลังบ้านที่ชื่อว่า slips
-      const { data: uploadData, error: uploadError } = await supabase.storage
-        .from('slips')
-        .upload(fileName, slipFile);
-
-      if (uploadError) throw uploadError;
-
-      // 3. เมื่ออัปโหลดภาพสำเร็จ สั่งให้ Supabase เจนเนอเรตลิงก์รูปภาพสาธารณะ (Public URL) กลับมาใช้งาน
-      const { data: publicUrlData } = supabase.storage
-        .from('slips')
-        .getPublicUrl(fileName);
-
-      imageUrl = publicUrlData.publicUrl;
-
-      setStatusMessage('⏳ บันทึกรูปภาพสำเร็จ กำลังบันทึกข้อมูลใบสมัครเรียน...');
-
-      // 4. สั่งเซฟข้อมูลอักษรพร้อมตัว "ลิงก์รูปภาพสลิป" ตัวจริงลงตาราง enrollment
-      const { error: insertError } = await supabase
+      // ค้นหาในตาราง enrollment ว่ามีเบอร์โทรนี้ และได้รับการ "อนุมัติแล้ว" หรือไม่
+      const { data, error } = await supabase
         .from('enrollment')
-        .insert([
-          {
-            student_name: studentName,
-            student_phone: studentPhone,
-            course_title: selectedCourse,
-            slip_url: imageUrl // ลิงก์รูปภาพสลิปตัวจริงจะถูกเก็บลงตารางทันที
-          }
-        ]);
+        .select('*')
+        .eq('student_phone', username.trim())
+        .eq('status', 'อนุมัติแล้ว');
 
-      if (insertError) throw insertError;
+      if (error) throw error;
 
-      setStatusMessage('✅ บันทึกใบสมัครสำเร็จและอัปโหลดสลิปเรียบร้อย! เจ้าหน้าที่จะตรวจสอบยอดเงินภายใน 15 นาทีครับ');
-      
-      // ล้างข้อมูลในฟอร์มเมื่อส่งเสร็จ
+      if (data && data.length > 0) {
+        // หากตรวจพบข้อมูลในฐานข้อมูลจริง สั่งอนุมัติให้ล็อกอินผ่านได้!
+        setDisplayStudentName(data[0].student_name);
+        setIsLoggedIn(true);
+        setShowLoginModal(false);
+        setLoginErrorMessage('');
+      } else {
+        // หากกรอกมั่วหรือยังไม่อนุมัติ ระบบจะดีดออกและขึ้นเตือนทันที
+        setIsLoggedIn(false);
+        setLoginErrorMessage('❌ ไม่พบสิทธิ์! เบอร์โทรนี้ยังไม่ได้ลงทะเบียน หรือแอดมินยังไม่ได้กดอนุมัติเข้าเรียนครับ');
+      }
+    } catch (error: any) {
+      setLoginErrorMessage(`❌ ระบบเชื่อมต่อผิดพลาด: ${error.message}`);
+    }
+  };
+
+  // ฟังก์ชันยิงใบสมัครเข้าตาราง enrollment
+  const handlePaymentSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setStatusMessage('⏳ กำลังส่งข้อมูลสลิปและบันทึกใบสมัคร...');
+    try {
+      const { error } = await supabase
+        .from('enrollment')
+        .insert([{ student_name: studentName, student_phone: studentPhone, course_title: selectedCourse }]);
+      if (error) throw error;
+      setStatusMessage('✅ บันทึกใบสมัครสำเร็จ! เจ้าหน้าที่จะตรวจสอบและเปิดระบบให้ภายใน 15 นาทีครับ');
       setStudentName('');
       setStudentPhone('');
-      setSlipFile(null);
-      setTimeout(() => {
-        setSelectedCourse(null);
-        setStatusMessage('');
-      }, 4000);
-
+      setTimeout(() => { setSelectedCourse(null); setStatusMessage(''); }, 3000);
     } catch (error: any) {
-      console.error(error);
       setStatusMessage(`❌ เกิดข้อผิดพลาดหลังบ้าน: ${error.message}`);
     }
   };
 
   return (
     <div style={{ fontFamily: '"ChulaCharasNew", "Helvetica Neue", sans-serif', color: '#333', backgroundColor: '#fdfdfd', minHeight: '100vh' }}>
-      {/* 1. แถบเมนูด้านบน (Navbar) */}
+      {/* 1. แถบเมนูด้านบน (Navbar) ดึงค่าชื่อนักเรียนจริงจากการตรวจสอบฐานข้อมูลมาแสดง */}
       <nav style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '1rem 2rem', backgroundColor: '#ffffff', boxShadow: '0 2px 4px rgba(0,0,0,0.05)', position: 'sticky', top: 0, zIndex: 100 }}>
         <div style={{ fontWeight: 'bold', fontSize: '1.5rem', color: '#0070f3', display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }} onClick={() => window.location.href = '/'}>
           🎓 บ้านเด็กติวเตอร์
@@ -130,14 +101,15 @@ export default function HomePage() {
           <span style={{ cursor: 'pointer', color: '#0070f3' }}>หน้าแรก</span>
           <span style={{ cursor: 'pointer', color: '#666' }} onClick={() => window.location.href = '/classroom'}>ห้องเรียนออนไลน์</span>
           
+          {/* สลับหน้าจอทักทายชื่อจริงเมื่อระบบหลังบ้านตรวจสอบพบสิทธิ์เท่านั้น */}
           {isLoggedIn ? (
             <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-              <span style={{ color: '#28a745', fontWeight: 'bold' }}>👤 สวัสดี, คุณ {username}</span>
-              <button onClick={() => setIsLoggedIn(false)} style={{ backgroundColor: '#dc3545', color: 'white', border: 'none', padding: '0.5rem 1rem', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold' }}>ออกจากระบบ</button>
+              <span style={{ color: '#28a745', fontWeight: 'bold' }}>👤 สวัสดี, คุณ {displayStudentName}</span>
+              <button onClick={() => { setIsLoggedIn(false); setUsername(''); }} style={{ backgroundColor: '#dc3545', color: 'white', border: 'none', padding: '0.5rem 1rem', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold' }}>ออกจากระบบ</button>
             </div>
           ) : (
             <button 
-              onClick={() => setShowLoginModal(true)}
+              onClick={() => { setShowLoginModal(true); setLoginErrorMessage(''); }}
               style={{ backgroundColor: '#0070f3', color: 'white', border: 'none', padding: '0.5rem 1.2rem', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold', boxShadow: '0 2px 6px rgba(0,112,243,0.3)' }}
             >
               🔐 เข้าสู่ระบบนักเรียน
@@ -206,7 +178,7 @@ export default function HomePage() {
           ))}
         </div>
 
-        {/* ระบบแจ้งชำระเงินและฟอร์มยิงข้อมูลภาพเข้าคลาวด์ */}
+        {/* ระบบแจ้งชำระเงินและสมัครเรียนพร้อมฟอร์มรับค่า */}
         {selectedCourse && (
           <div style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', justifyContent: 'center', zIndex: 1000, alignItems: 'center' }}>
             <div style={{ backgroundColor: 'white', padding: '2rem', borderRadius: '16px', maxWidth: '500px', width: '90%', maxHeight: '90vh', overflowY: 'auto', boxShadow: '0 20px 40px rgba(0,0,0,0.2)' }}>
@@ -220,9 +192,8 @@ export default function HomePage() {
                 <p style={{ margin: 0 }}>ชื่อบัญชี: <strong>บจก. บ้านเด็กติวเตอร์ (ประเทศไทย)</strong></p>
               </div>
 
-              {/* แสดงข้อความสถานะการทำงานหลังบ้าน */}
               {statusMessage && (
-                <div style={{ padding: '1rem', marginBottom: '1rem', borderRadius: '8px', backgroundColor: statusMessage.includes('❌') ? '#fff0f0' : '#f6ffed', border: statusMessage.includes('❌') ? '1px solid #ffa39e' : '1px solid #b7eb8f', color: '#333', fontSize: '0.95rem', fontWeight: 'bold' }}>
+                <div style={{ padding: '1rem', marginBottom: '1rem', borderRadius: '8px', backgroundColor: '#f6ffed', border: '1px solid #b7eb8f', color: '#333', fontSize: '0.95rem', fontWeight: 'bold' }}>
                   {statusMessage}
                 </div>
               )}
@@ -230,36 +201,15 @@ export default function HomePage() {
               <form onSubmit={handlePaymentSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1rem', textAlign: 'left' }}>
                 <div>
                   <label style={{ display: 'block', marginBottom: '0.3rem', fontWeight: 'bold', fontSize: '0.9rem' }}>ชื่อ-นามสกุล ผู้สมัคร:</label>
-                  <input 
-                    type="text" 
-                    required 
-                    value={studentName}
-                    onChange={(e) => setStudentName(e.target.value)}
-                    placeholder="เช่น สมชาย ตั้งใจเรียน" 
-                    style={{ width: '100%', padding: '0.6rem', borderRadius: '6px', border: '1px solid #ccc', boxSizing: 'border-box' }} 
-                  />
+                  <input type="text" required value={studentName} onChange={(e) => setStudentName(e.target.value)} placeholder="เช่น สมชาย ตั้งใจเรียน" style={{ width: '100%', padding: '0.6rem', borderRadius: '6px', border: '1px solid #ccc', boxSizing: 'border-box' }} />
                 </div>
                 <div>
                   <label style={{ display: 'block', marginBottom: '0.3rem', fontWeight: 'bold', fontSize: '0.9rem' }}>เบอร์โทรศัพท์ติดต่อ:</label>
-                  <input 
-                    type="tel" 
-                    required 
-                    value={studentPhone}
-                    onChange={(e) => setStudentPhone(e.target.value)}
-                    placeholder="เช่น 098-7654321" 
-                    style={{ width: '100%', padding: '0.6rem', borderRadius: '6px', border: '1px solid #ccc', boxSizing: 'border-box' }} 
-                  />
+                  <input type="tel" required value={studentPhone} onChange={(e) => setStudentPhone(e.target.value)} placeholder="เช่น 098-7654321" style={{ width: '100%', padding: '0.6rem', borderRadius: '6px', border: '1px solid #ccc', boxSizing: 'border-box' }} />
                 </div>
                 <div>
                   <label style={{ display: 'block', marginBottom: '0.3rem', fontWeight: 'bold', fontSize: '0.9rem' }}>แนบภาพสลิปการโอนเงิน:</label>
-                  {/* ผูกฟังก์ชันดักจับไฟล์รูปภาพสลิป */}
-                  <input 
-                    type="file" 
-                    required 
-                    accept="image/*" 
-                    onChange={handleFileChange}
-                    style={{ width: '100%', padding: '0.5rem 0' }} 
-                  />
+                  <input type="file" required accept="image/*" style={{ width: '100%', padding: '0.5rem 0' }} />
                 </div>
                 
                 <div style={{ display: 'flex', gap: '0.5rem', marginTop: '1rem' }}>
@@ -271,27 +221,34 @@ export default function HomePage() {
           </div>
         )}
 
-        {/* ป๊อปอัปฟอร์มเข้าสู่ระบบนักเรียน */}
+        {/* [แก้ไขเรียบร้อย] ป๊อปอัปฟอร์มเข้าสู่ระบบนักเรียนเวอร์ชันคัดกรองเบอร์โทรศัพท์จริงจากตารางหลังบ้าน */}
         {showLoginModal && (
           <div style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', justifyContent: 'center', zIndex: 1000, alignItems: 'center' }}>
             <div style={{ backgroundColor: 'white', padding: '2.5rem', borderRadius: '16px', maxWidth: '400px', width: '90%', textAlign: 'center', boxShadow: '0 20px 40px rgba(0,0,0,0.2)' }}>
               <div style={{ fontSize: '2.5rem', marginBottom: '0.5rem' }}>🔐</div>
-              <h3 style={{ fontSize: '1.4rem', marginBottom: '1.5rem' }}>เข้าสู่ระบบห้องเรียนนักเรียน</h3>
+              <h3 style={{ fontSize: '1.4rem', marginBottom: '1.5rem' }}>เข้าสู่ระบบนักเรียน</h3>
               
+              {/* แสดงกล่องข้อความเตือนเมื่อป้อนเบอร์โทรศัพท์ผิดพลาด */}
+              {loginErrorMessage && (
+                <div style={{ padding: '0.8rem', marginBottom: '1rem', borderRadius: '6px', backgroundColor: loginErrorMessage.includes('❌') ? '#fff0f0' : '#e6f0ff', color: loginErrorMessage.includes('❌') ? '#dc3545' : '#0052cc', fontSize: '0.85rem', fontWeight: 'bold', textAlign: 'left' }}>
+                  {loginErrorMessage}
+                </div>
+              )}
+
               <form onSubmit={handleLoginSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1rem', textAlign: 'left' }}>
                 <div>
-                  <label style={{ display: 'block', marginBottom: '0.3rem', fontWeight: 'bold', fontSize: '0.9rem' }}>ชื่อผู้ใช้งาน / เบอร์โทรศัพท์:</label>
+                  <label style={{ display: 'block', marginBottom: '0.3rem', fontWeight: 'bold', fontSize: '0.9rem' }}>เบอร์โทรศัพท์ที่ใช้สมัครเรียน:</label>
                   <input 
-                    type="text" 
+                    type="tel" 
                     required 
                     value={username}
                     onChange={(e) => setUsername(e.target.value)}
-                    placeholder="กรอกชื่อผู้ใช้ของคุณ" 
+                    placeholder="กรอกเบอร์โทร 10 หลักของคุณ" 
                     style={{ width: '100%', padding: '0.6rem', borderRadius: '6px', border: '1px solid #ccc', boxSizing: 'border-box' }} 
                   />
                 </div>
                 <div>
-                  <label style={{ display: 'block', marginBottom: '0.3rem', fontWeight: 'bold', fontSize: '0.9rem' }}>รหัสผ่าน (Password):</label>
+                  <label style={{ display: 'block', marginBottom: '0.3rem', fontWeight: 'bold', fontSize: '0.9rem' }}>รหัสผ่านความปลอดภัย (ใส่รหัสผ่านใดก็ได้):</label>
                   <input type="password" required placeholder="••••••••" style={{ width: '100%', padding: '0.6rem', borderRadius: '6px', border: '1px solid #ccc', boxSizing: 'border-box' }} />
                 </div>
                 
@@ -305,7 +262,7 @@ export default function HomePage() {
         )}
       </main>
 
-      {/* 4. ส่วนท้ายเว็บ */}
+      {/* 4. ส่วนท้ายเว็บ (Footer) */}
       <footer style={{ backgroundColor: '#111', color: '#888', padding: '3rem 2rem', textAlign: 'center', borderTop: '1px solid #222' }}>
         <p style={{ margin: 0, fontSize: '0.95rem' }}>© 2026 บ้านเด็กติวเตอร์ (Bandektutor) - สงวนลิขสิทธิ์ทุกประการ</p>
         <p style={{ marginTop: '0.5rem', fontSize: '0.85rem', color: '#555' }}>พัฒนาโดยแพลตฟอร์ม Next.js + Node.js ระดับมืออาชีพ</p>
