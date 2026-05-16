@@ -1,6 +1,6 @@
 'use client';
 import { useState, useEffect } from 'react';
-import { supabase } from '../../supabaseClient';
+import { supabase } from '../../supabaseClient'; // ตัวเชื่อมฐานข้อมูล Supabase
 
 export default function ClassroomPage() {
   // ระบบจัดการสถานะล็อกอินและการเข้าถึงสิทธิ์
@@ -9,84 +9,44 @@ export default function ClassroomPage() {
   const [loginMessage, setLoginMessage] = useState('');
   const [studentName, setStudentName] = useState('');
   
-  // ตัวแปรเก็บรายชื่อคอร์สทั้งหมดและคอร์สที่กำลังเลือกเรียน
+  // รายชื่อคอร์สทั้งหมดและคอร์สที่กำลังเลือกเรียน
   const [myCourses, setMyCourses] = useState<string[]>([]);
   const [selectedCourse, setSelectedCourse] = useState<string>('');
 
-  // ระบบจัดการป๊อปอัปข้อสอบกากบาท และตัวแปรคำนวณคะแนนจริง
+  // ระบบจัดการป๊อปอัปข้อสอบกากบาท และคะแนนสอบจริง
   const [showQuizModal, setShowQuizModal] = useState(false);
   const [selectedAnswers, setSelectedAnswers] = useState<any>({});
   const [quizSubmitted, setQuizSubmitted] = useState(false);
   const [liveExamScore, setLiveExamScore] = useState('ยังไม่ได้ทดสอบ 🎯');
   const [rawScoreCount, setRawScoreCount] = useState(0);
 
-  // [แก้ไขเรียบร้อย] เปลี่ยนมาใช้ตัว L พิมพ์ใหญ่มาตรฐาน (currentLesson / setCurrentLesson) แก้ปัญหา Error ทั้งหมดทันที!
-  const [currentLesson, setCurrentLesson] = useState<any>(null);
+  // 📝 [ฟีเจอร์เด็ด] ตัวแปรสแตนด์บายเก็บ "ชุดข้อสอบจริง" ที่ดึงมาจาก Supabase
+  const [activeQuestions, setActiveQuestions] = useState<any[]>([]);
 
-  // ระบบเก็บข้อมูลสถิติมัดใจผู้เรียน
-  const studentStats = {
-    progress: '75%',
-    completedLessons: 3,
-    examScore: '19/20 คะแนน (ผ่านเกณฑ์ระดับสูง 🏆)'
-  };
-
-  // คลังข้อมูลบทเรียนอัปเกรดเพิ่ม "ชุดคำถามและเฉลยละเอียดข้อสอบตำรวจ/ก.พ." ประจำแต่ละ EP จริง!
+  // 1. คลังประวัติบทเรียน Playlist ด้านข้าง
   const allCoursesContent: any = {
     '🥇 คอร์สติวสอบ ก.พ. ภาค ก. (ฉบับผ่านชัวร์)': [
-      { 
-        id: 1, 
-        title: 'ก.พ. EP 1: เจาะลึกโครงสร้างข้อสอบ ก.พ. และเทคนิคการเตรียมตัว', 
-        duration: '15:20 นาที', 
-        youtubeid: 'g9z7FstC4j0',
-        quizQuestions: [
-          { q: 'ข้อใดเป็นสัดส่วนของเกณฑ์การสอบผ่านวิชาความรู้ความสามารถทั่วไป ของ ป.ตรี?', a: 'ก', options: { ก: 'ต้องได้คะแนนไม่ต่ำกว่า 60%', ข: 'ต้องได้คะแนนไม่ต่ำกว่า 50%', ค: 'ต้องได้คะแนนไม่ต่ำกว่า 65%', ง: 'ต้องได้คะแนนไม่ต่ำกว่า 70%' }, detail: 'เฉลย ก: ระดับปริญญาตรีและโท ต้องผ่านเกณฑ์ 60% ส่วนปริญญาตรีเกียรตินิยมไม่มีข้อยกเว้นครับ' }
-        ]
-      },
-      { 
-        id: 2, 
-        title: 'ก.พ. EP 2: คณิตศาสตร์ - เทคนิคคิดเลขเร็วและการหา ห.ร.ม. / ค.ร.น.', 
-        duration: '45:10 นาที', 
-        youtubeid: '7P6F_S87Fls',
-        quizQuestions: [
-          { q: 'เลข 12 และ 18 มี ห.ร.ม. ตรงกับข้อใด?', a: 'ข', options: { ก: '3', ข: '6', ค: '36', ง: '2' }, detail: 'เฉลย ข: ตัวหารร่วมที่มากที่สุดของ 12 และ 18 คือ 6 (12/6=2, 18/6=3) ครับ' }
-        ]
-      }
+      { id: 1, title: 'ก.พ. EP 1: เจาะลึกโครงสร้างข้อสอบ ก.พ. และเทคนิคการเตรียมตัว', duration: '15:20 นาที', youtubeid: 'g9z7FstC4j0' },
+      { id: 2, title: 'ก.พ. EP 2: คณิตศาสตร์ - เทคนิคคิดเลขเร็วและการหา ห.ร.ม. / ค.ร.น.', duration: '45:10 นาที', youtubeid: '7P6F_S87Fls' }
     ],
     '👮 คอร์สติวสอบ นายสิบตำรวจ (นสต. สายปราบปราม)': [
-      { 
-        id: 1, 
-        title: 'นสต.ปราบปราม EP 1: ความสามารถทั่วไป - แนวข้อสอบคณิตศาสตร์ตำรวจ อนุกรมและสมการลัด', 
-        duration: '35:40 นาที', 
-        youtubeid: 'g9z7FstC4j0',
-        quizQuestions: [
-          { q: 'ข้อสอบอนุกรมตำรวจ: 2, 4, 8, 16, ... ตัวเลขถัดไปคือข้อใด?', a: 'ค', options: { ก: '20', ข: '24', ค: '32', ง: '64' }, detail: 'เฉลย ค: อนุกรมชุดนี้มีความสัมพันธ์แบบคูณ 2 เพิ่มขึ้นเรื่อยๆ (16 x 2 = 32) ครับ' },
-          { q: 'สมการตำรวจ: 3x + 5 = 20 ค่าของ x ตรงกับข้อใด?', a: 'ก', options: { ก: '5', ข: '15', ค: '4', ง: '3' }, detail: 'เฉลย ก: ย้าย 5 ไปลบออกซ้ายเหลือ 15 ย้าย 3 ไปหาร 15 ได้ผลลัพธ์เป็น 5 ครับ' }
-        ]
-      },
-      { 
-        id: 2, 
-        title: 'นสต.ปราบปราม EP 2: กฎหมายเบื้องต้นที่ประชาชนควรรู้ - เจาะลึกกฎหมายอาญาสำหรับตำรวจปราบปราม', 
-        duration: '55:15 นาที', 
-        youtubeid: '7P6F_S87Fls',
-        quizQuestions: [
-          { q: 'การกระทำความผิดในข้อใดจัดเป็นความผิดลหุโทษตามประมวลกฎหมายอาญา?', a: 'ง', options: { ก: 'ข้อหาลักทรัพย์จำคุก 3 ปี', ข: 'ข้อหาทำร้ายร่างกายสาหัส', ค: 'ข้อหาฆ่าผู้อื่นโดยเจตนา', ง: 'ความผิดที่มีโทษจำคุกไม่เกิน 1 เดือน หรือปรับไม่เกิน 10,000 บาท' }, detail: 'เฉลย ง: ตามกฎหมายอาญามาตรา 102 ความผิดลหุโทษคือโทษคุกไม่เกิน 1 เดือน หรือปรับไม่เกินหมื่นบาทครับ' }
-        ]
-      }
+      { id: 1, title: 'นสต.ปราบปราม EP 1: ความสามารถทั่วไป - แนวข้อสอบคณิตศาสตร์ตำรวจ อนุกรมและสมการลัด', duration: '35:40 นาที', youtubeid: 'g9z7FstC4j0' },
+      { id: 2, title: 'นสต.ปราบปราม EP 2: กฎหมายเบื้องต้นที่ประชาชนควรรู้ - เจาะลึกกฎหมายอาญาสำหรับตำรวจปราบปราม', duration: '55:15 นาที', youtubeid: '7P6F_S87Fls' },
+      { id: 3, title: 'นสต.ปราบปราม EP 3: คอมพิวเตอร์และเทคโนโลยีสารสนเทศ - แนวข้อสอบเครือข่าย พรบ.คอมพิวเตอร์ และระบบสืบค้นข้อมูล', duration: '42:20 นาที', youtubeid: 'O9YwE8_O5rI' },
+      { id: 4, title: 'นสต.ปราบปราม EP 4: ภาษาไทยตำรวจ - การสะกดคำ คำลักษณนาม และการอ่านจับใจความข้อสอบจริงสายปราบปราม', duration: '38:10 นาที', youtubeid: 'g9z7FstC4j0' },
+      { id: 5, title: 'นสต.ปราบปราม EP 5: ภาษาอังกฤษตำรวจ - ตะลุยโจทย์ Grammar, Reading และศัพท์กฎหมายพื้นฐานในงานปราบปราม', duration: '48:30 นาที', youtubeid: '7P6F_S87Fls' }
     ],
     '💼 คอร์สติวสอบ นายสิบตำรวจ (สายอำนวยการและสนับสนุน)': [
-      { 
-        id: 1, 
-        title: 'นสต.อำนวยการ EP 1: ระเบียบงานสารบรรณ พ.ศ. 2526 - เจาะลึกชนิดของหนังสือราชการและรูปแบบการพิมพ์', 
-        duration: '32:50 นาที', 
-        youtubeid: 'g9z7FstC4j0',
-        quizQuestions: [
-          { q: 'หนังสือราชการตามระเบียบงานสารบรรณ พ.ศ. 2526 มีทั้งหมดกี่ชนิด?', a: 'ข', options: { ก: '4 ชนิด', ข: '6 ชนิด', ค: '5 ชนิด', ง: '8 ชนิด' }, detail: 'เฉลย ข: หนังสือราชการมี 6 ชนิด ได้แก่ หนังสือภายนอก ภายใน ประทับตรา สั่งการ ประชาสัมพันธ์ และหนังสือที่เจ้าหน้าที่ทำขึ้นครับ' }
-        ]
-      }
+      { id: 1, title: 'นสต.อำนวยการ EP 1: ระเบียบงานสารบรรณ พ.ศ. 2526 - เจาะลึกชนิดของหนังสือราชการและรูปแบบการพิมพ์', duration: '32:50 นาที', youtubeid: 'g9z7FstC4j0' },
+      { id: 2, title: 'นสต.อำนวยการ EP 2: ภาษาต่างประเทศ (English) - หลักไวยากรณ์ การอ่าน และการตอบอีเมลงานเอกสารภาษาอังกฤษ', duration: '45:30 นาที', youtubeid: '7P6F_S87Fls' },
+      { id: 3, title: 'นสต.อำนวยการ EP 3: สังคม วัฒนธรรม จริยธรรม - ค่านิยมและหลักธรรมาภิบาลในงานธุรการสนับสนุนหน่วยงานตำรวจ', duration: '40:10 นาที', youtubeid: 'O9YwE8_O5rI' }
     ]
   };
 
-  // ฟังก์ชันดึงประวัติทุกคอร์สของเบอร์โทรศัพท์นี้จากหลังบ้าน Supabase
+  const [currentLesson, setCurrentLesson] = useState<any>(null);
+  const studentStats = { progress: '75%', completedLessons: 3, examScore: '19/20 คะแนน (ผ่านเกณฑ์ระดับสูง 🏆)' };
+
+  // ดึงประวัติทุกคอร์สของเบอร์โทรศัพท์นี้จากหลังบ้าน Supabase
   const loadStudentCourses = async (phone: string, name: string) => {
     try {
       const { data, error } = await supabase
@@ -96,39 +56,84 @@ export default function ClassroomPage() {
         .eq('status', 'อนุมัติแล้ว');
 
       if (error) throw error;
-
       if (data && data.length > 0) {
         const courseList = data.map((item: any) => item.course_title);
         const uniqueCourses = Array.from(new Set(courseList));
-        
         setMyCourses(uniqueCourses);
         setSelectedCourse(uniqueCourses[0]); 
-        
         setStudentName(name);
         setIsAuthenticated(true);
       }
-    } catch (e: any) {
-      console.error(e);
-    }
+    } catch (e: any) { console.error(e); }
   };
 
   useEffect(() => {
     const savedPhone = localStorage.getItem('user_phone');
     const savedName = localStorage.getItem('user_name');
-    if (savedPhone && savedName) {
-      loadStudentCourses(savedPhone, savedName);
-    }
+    if (savedPhone && savedName) { loadStudentCourses(savedPhone, savedName); }
   }, []);
+  // 🔄 [ฟีเจอร์เด็ดอัปเกรดเรียบร้อย] ฟังก์ชันวิ่งไปดึงข้อมูลข้อสอบจริงแบบเรียลไทม์จากดาต้าเบส Supabase
+  const loadQuizFromSupabase = async (courseTitle: string, lessonId: number) => {
+    try {
+      setActiveQuestions([]); // ล้างค่าคำถามเก่าในระบบชั่วคราว
+      
+      const { data, error } = await supabase
+        .from('quizzes')
+        .select('*')
+        .eq('course_title', courseTitle)
+        .eq('lesson_id', lessonId);
 
+      if (error) throw error;
+
+      if (data && data.length > 0) {
+        // นำข้อมูลตารางที่ดึงมา จัดแมป (Map) โครงสร้างให้เข้ากับหน้าต่างป๊อปอัปข้อสอบของหน้าแรก
+        const formattedQuestions = data.map((item: any) => ({
+          q: item.question,
+          a: item.correct_answer,
+          options: {
+            ก: item.option_a,
+            ข: item.option_b,
+            ค: item.option_c,
+            ง: item.option_d
+          },
+          detail: item.explanation
+        }));
+        setActiveQuestions(formattedQuestions);
+      }
+    } catch (err: any) {
+      console.error('❌ ดึงข้อสอบหลังบ้านล้มเหลว:', err.message);
+    }
+  };
+
+  // ดักจับจังหวะการสลับเปลี่ยนคอร์สหลักในกล่อง Dropdown ด้านบน
   useEffect(() => {
     if (selectedCourse && allCoursesContent[selectedCourse]) {
-      setCurrentLesson(allCoursesContent[selectedCourse][0]);
+      const targetLessons = allCoursesContent[selectedCourse];
+      setCurrentLesson(targetLessons[0]); // โหลดบทเรียนย่อยแรกสุด
       setQuizSubmitted(false);
       setSelectedAnswers({});
       setRawScoreCount(0);
+      setLiveExamScore('ยังไม่ได้ทดสอบ 🎯');
+      
+      // สั่งดึงข้อสอบจาก Supabase ของคอร์สใหม่ EP 1 ทันที
+      loadQuizFromSupabase(selectedCourse, targetLessons[0].id);
     }
   }, [selectedCourse]);
-  // ฟังก์ชันส่องตรวจสอบเบอร์โทรศัพท์พร้อมรวบรวมรายชื่อคอร์สทั้งหมด
+
+  // ดักจับจังหวะที่นักเรียนคลิกเปลี่ยนบทเรียน (EP) ที่แถบ Playlist ด้านข้าง
+  useEffect(() => {
+    if (selectedCourse && currentLesson) {
+      setQuizSubmitted(false);
+      setSelectedAnswers({});
+      setRawScoreCount(0);
+      setLiveExamScore('ยังไม่ได้ทดสอบ 🎯');
+      
+      // สั่งกวาดข้อมูลข้อสอบตัวจริงจากฐานข้อมูลตาม ID ของอีพีนั้น ๆ เรียลไทม์!
+      loadQuizFromSupabase(selectedCourse, currentLesson.id);
+    }
+  }, [currentLesson]);
+
+  // ฟังก์ชันส่องตรวจสอบเบอร์โทรศัพท์ในระบบ (กรณีไม่ได้เข้าผ่านทางหน้าแรก)
   const handleCheckLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoginMessage('⏳ กำลังตรวจสอบสิทธิ์และคอร์สทั้งหมดที่คุณสมัคร...');
@@ -147,14 +152,13 @@ export default function ClassroomPage() {
         const uniqueCourses = Array.from(new Set(courseList));
         
         setMyCourses(uniqueCourses);
-        setSelectedCourse(uniqueCourses[0]); // แก้ไขคัดเฉพาะค่าเดี่ยวแรกสุดที่เป็นตัวอักษร
+        setSelectedCourse(uniqueCourses[0]);
         setStudentName(data[0].student_name);
         setIsAuthenticated(true);
         setLoginMessage('');
         
         localStorage.setItem('user_phone', phoneInput.trim());
         localStorage.setItem('user_name', data[0].student_name);
-        localStorage.setItem('user_course', uniqueCourses[0]);
       } else {
         setLoginMessage('❌ ไม่พบสิทธิ์เข้าเรียน! เบอร์โทรนี้อาจจะยังไม่ได้สมัคร หรือแอดมินยังไม่ได้กดอนุมัติสลิปโอนเงินครับ');
       }
@@ -172,7 +176,7 @@ export default function ClassroomPage() {
     });
   };
 
-  // ฟังก์ชันคำนวณคะแนนสอบจริง และส่งค่าไปอัปเดตบนแถบกล่องสถิติ Pre-Test
+  // ฟังก์ชันคำนวณคะแนนสอบจริง และส่งค่าไปอัปเดตบนแถบกล่องสถิติ Pre-Test ด้านบนสุด
   const handleQuizSubmit = (e: React.FormEvent, questions: any[]) => {
     e.preventDefault();
     let correctCount = 0;
@@ -191,13 +195,8 @@ export default function ClassroomPage() {
   // คัดกรองบทเรียนปัจจุบันตามคอร์สเรียนที่เลือกใน Dropdown
   const currentCourseLessons = allCoursesContent[selectedCourse] || [];
   
-  // ป้องกันการโหลดสลับวิชาแล้วหาค่าเริ่มต้นไม่เจอ ปรับใช้ตัว L พิมพ์ใหญ่ทั้งหมด
-  const activeLesson = (currentLesson && currentLesson.title && currentCourseLessons.some((l: any) => l.id === currentLesson.id))
-    ? currentLesson 
-    : (currentCourseLessons[0] || { id: 0, title: 'ไม่มีข้อมูลวิชา', duration: '', youtubeid: '', quizQuestions: [] });
-
-  // ค้นหารายการคำถามข้อสอบของบทเรียน (EP) ปัจจุบัน
-  const activeQuestions = activeLesson.quizQuestions || [];
+  // กำหนดบทเรียนเดี่ยวที่แผงวิดีโอต้องดึงมาเล่น
+  const activeLesson = currentLesson || currentCourseLessons[0] || { id: 0, title: 'ไม่มีข้อมูลวิชา', duration: '', youtubeid: '' };
   // แสดงหน้าต่างล็อกอินคัดกรองเบอร์โทรศัพท์ (หากนักเรียนพิมพ์ลิงก์ห้องเรียนตรงๆ หรือล็อกเอาท์ไป)
   if (!isAuthenticated) {
     return (
@@ -222,9 +221,6 @@ export default function ClassroomPage() {
             </div>
             <button type="submit" style={{ backgroundColor: '#0052cc', color: 'white', border: 'none', padding: '0.8rem', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold', fontSize: '1.1rem' }}>
               🔓 ยืนยันสิทธิ์เข้าเรียน
-            </button>
-            <button type="button" onClick={() => window.location.href = '/'} style={{ backgroundColor: 'transparent', color: '#666', border: 'none', cursor: 'pointer', fontWeight: 'bold', fontSize: '0.95rem', textAlign: 'center', marginTop: '0.5rem' }}>
-              ↩️ กลับหน้าหลักเว็บ
             </button>
           </form>
         </div>
@@ -332,7 +328,7 @@ export default function ClassroomPage() {
                 <button 
                   onClick={() => {
                     if (activeQuestions.length === 0) {
-                      alert('📝 บทเรียนนี้ยังไม่มีชุดข้อสอบในระบบคลังปัจจุบันครับ');
+                      alert('📝 ขออภัยคร้าบบ บทเรียน EP นี้แอดมินยังไม่ได้อัพเดทชุดข้อสอบกากบาทตัวจริงเข้าตารางหลัก หรือกำลังเตรียมอัปโหลดข้อสอบชุดต่อไปอยู่ครับ');
                     } else {
                       setShowQuizModal(true);
                     }
@@ -359,8 +355,6 @@ export default function ClassroomPage() {
                   key={lesson.id}
                   onClick={() => {
                     setCurrentLesson(lesson);
-                    setQuizSubmitted(false);
-                    setSelectedAnswers({});
                   }}
                   style={{ padding: '1rem', borderRadius: '8px', cursor: 'pointer', border: isPlaying ? '2px solid #0052cc' : '1px solid #e1e8ed', backgroundColor: isPlaying ? '#e6f0ff' : '#fff', transition: 'all 0.2s' }}
                 >
@@ -374,20 +368,20 @@ export default function ClassroomPage() {
 
       </div>
 
-      {/* 📝 [ป๊อปอัปชุดข้อสอบกากบาทพร้อมกล่องสรุปคะแนนรวมแบนเนอร์สีฟ้าพรีเมียม] */}
+      {/* 📝 [ป๊อปอัปชุดข้อสอบกากบาทจากดาต้าเบสพร้อมแบนเนอร์สรุปคะแนนรวมพรีเมียมสีฟ้า] */}
       {showQuizModal && (
         <div style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', backgroundColor: 'rgba(0,0,0,0.6)', display: 'flex', justifyContent: 'center', zIndex: 2000, alignItems: 'center' }}>
           <div style={{ backgroundColor: 'white', padding: '2rem', borderRadius: '16px', maxWidth: '600px', width: '95%', maxHeight: '85vh', overflowY: 'auto', boxShadow: '0 20px 40px rgba(0,0,0,0.3)' }}>
             <h3 style={{ fontSize: '1.4rem', margin: '0 0 1rem 0', borderBottom: '2px solid #ff9f43', paddingBottom: '0.5rem', color: '#222' }}>
-              📝 คลังข้อสอบประจำบทเรียน: {activeLesson.title}
+              📝 คลังข้อสอบจากฐานข้อมูล: {activeLesson.title}
             </h3>
 
-            {/* [แถบกล่องสรุปคะแนนรวมพรีเมียม] ทำงานทันทีเมื่อกดส่งข้อสอบสำเร็จ */}
+            {/* แถบกล่องแบนเนอร์โชว์ผลคะแนนรวม จะเด้งโผล่ทันทีที่ประมวลผลคำตอบสำเร็จ */}
             {quizSubmitted && (
               <div style={{ backgroundColor: '#e6f7ff', border: '1px solid #91d5ff', padding: '1.2rem', borderRadius: '10px', textAlign: 'center', marginBottom: '1.5rem', boxShadow: '0 4px 10px rgba(145,213,255,0.2)' }}>
-                <span style={{ fontSize: '1.1rem', color: '#0050b3', fontWeight: 'bold', display: 'block', marginBottom: '0.2rem' }}>📊 สรุปผลการทดสอบของคุณ</span>
+                <span style={{ fontSize: '1.1rem', color: '#0050b3', fontWeight: 'bold', display: 'block', marginBottom: '0.2rem' }}>📊 สรุปผลการทดสอบเรียลไทม์</span>
                 <span style={{ fontSize: '1.8rem', fontWeight: 'bold', color: '#0050b3' }}>ได้คะแนน {rawScoreCount} / {activeQuestions.length} แต้ม</span>
-                <p style={{ margin: '0.3rem 0 0 0', fontSize: '0.85rem', color: '#555' }}>ระบบอัปเดตข้อมูลสถิติเรียบร้อยแล้ว สามารถตรวจทานป้ายเฉลยอธิบายได้ที่ข้อสอบด้านล่างคร้าบบ 👇</p>
+                <p style={{ margin: '0.3rem 0 0 0', fontSize: '0.85rem', color: '#555' }}>ระบบได้ทำการบันทึกข้อมูลสถิตินี้เรียบร้อยแล้ว ตรวจเช็คเฉลยและหลักคำอธิบายด้านล่างได้เลยครับ 👇</p>
               </div>
             )}
             
