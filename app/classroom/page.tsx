@@ -9,7 +9,7 @@ export default function ClassroomPage() {
   const [loginMessage, setLoginMessage] = useState('');
   const [studentName, setStudentName] = useState('');
   
-  // [แก้ไขจุดที่ 1] ปรับประเภทตัวแปรให้เป็น string เพื่อรองรับชื่อคอร์สเดี่ยว ป้องกันไม่ให้ขึ้น Error ตรงบรรทัด 94 ทันที!
+  // ตัวแปรเก็บรายชื่อคอร์สทั้งหมดและคอร์สที่กำลังเลือกเรียน
   const [myCourses, setMyCourses] = useState<string[]>([]);
   const [selectedCourse, setSelectedCourse] = useState<string>('');
 
@@ -18,8 +18,12 @@ export default function ClassroomPage() {
   const [selectedAnswers, setSelectedAnswers] = useState<any>({});
   const [quizSubmitted, setQuizSubmitted] = useState(false);
   const [liveExamScore, setLiveExamScore] = useState('ยังไม่ได้ทดสอบ 🎯');
+  const [rawScoreCount, setRawScoreCount] = useState(0);
 
-  // [แก้ไขจุดที่ 2] จัดวางตำแหน่งตัวแปรสถิติให้อยู่ส่วนบนสุดของฟังก์ชัน เพื่อให้โค้ดด้านล่างดึงข้อมูลไปใช้ได้ ไร้ปัญหาดึงค่าล้มเหลว!
+  // [แก้ไขเรียบร้อย] เปลี่ยนมาใช้ตัว L พิมพ์ใหญ่มาตรฐาน (currentLesson / setCurrentLesson) แก้ปัญหา Error ทั้งหมดทันที!
+  const [currentLesson, setCurrentLesson] = useState<any>(null);
+
+  // ระบบเก็บข้อมูลสถิติมัดใจผู้เรียน
   const studentStats = {
     progress: '75%',
     completedLessons: 3,
@@ -82,10 +86,7 @@ export default function ClassroomPage() {
     ]
   };
 
-  // แสตนด์บายสถานะบทเรียนเดี่ยวที่กำลังเปิดเล่น
-  const [currentlesson, setCurrentlesson] = useState<any>(null);
-
-  // ฟังก์ชันพิเศษดึงประวัติทุกคอร์สของเบอร์โทรศัพท์นี้โดยตรงจากหลังบ้าน Supabase
+  // ฟังก์ชันดึงประวัติทุกคอร์สของเบอร์โทรศัพท์นี้จากหลังบ้าน Supabase
   const loadStudentCourses = async (phone: string, name: string) => {
     try {
       const { data, error } = await supabase
@@ -101,7 +102,6 @@ export default function ClassroomPage() {
         const uniqueCourses = Array.from(new Set(courseList));
         
         setMyCourses(uniqueCourses);
-        // [แก้ไขจุดที่ 3] ส่งค่าวิชาแรกในกล่อง (index 0) ที่เป็นข้อความปกติลงไป เพื่อแก้ไขบั๊ก SetStateAction ตัวแรกสุด!
         setSelectedCourse(uniqueCourses[0]); 
         
         setStudentName(name);
@@ -122,9 +122,10 @@ export default function ClassroomPage() {
 
   useEffect(() => {
     if (selectedCourse && allCoursesContent[selectedCourse]) {
-      setCurrentlesson(allCoursesContent[selectedCourse]);
+      setCurrentLesson(allCoursesContent[selectedCourse][0]);
       setQuizSubmitted(false);
       setSelectedAnswers({});
+      setRawScoreCount(0);
     }
   }, [selectedCourse]);
   // ฟังก์ชันส่องตรวจสอบเบอร์โทรศัพท์พร้อมรวบรวมรายชื่อคอร์สทั้งหมด
@@ -182,6 +183,7 @@ export default function ClassroomPage() {
       }
     });
 
+    setRawScoreCount(correctCount);
     setQuizSubmitted(true);
     setLiveExamScore(`${correctCount} / ${questions.length} คะแนน ✨`);
   };
@@ -189,14 +191,13 @@ export default function ClassroomPage() {
   // คัดกรองบทเรียนปัจจุบันตามคอร์สเรียนที่เลือกใน Dropdown
   const currentCourseLessons = allCoursesContent[selectedCourse] || [];
   
-  // ป้องกันการโหลดสลับวิชาแล้วหาค่าเริ่มต้นไม่เจอ
-  const activeLesson = (currentlesson && currentlesson.title && currentCourseLessons.some((l: any) => l.id === currentlesson.id))
-    ? currentlesson 
+  // ป้องกันการโหลดสลับวิชาแล้วหาค่าเริ่มต้นไม่เจอ ปรับใช้ตัว L พิมพ์ใหญ่ทั้งหมด
+  const activeLesson = (currentLesson && currentLesson.title && currentCourseLessons.some((l: any) => l.id === currentLesson.id))
+    ? currentLesson 
     : (currentCourseLessons[0] || { id: 0, title: 'ไม่มีข้อมูลวิชา', duration: '', youtubeid: '', quizQuestions: [] });
 
   // ค้นหารายการคำถามข้อสอบของบทเรียน (EP) ปัจจุบัน
   const activeQuestions = activeLesson.quizQuestions || [];
-
   // แสดงหน้าต่างล็อกอินคัดกรองเบอร์โทรศัพท์ (หากนักเรียนพิมพ์ลิงก์ห้องเรียนตรงๆ หรือล็อกเอาท์ไป)
   if (!isAuthenticated) {
     return (
@@ -217,7 +218,7 @@ export default function ClassroomPage() {
           <form onSubmit={handleCheckLogin} style={{ display: 'flex', flexDirection: 'column', gap: '1.2rem', textAlign: 'left' }}>
             <div>
               <label style={{ display: 'block', marginBottom: '0.4rem', fontWeight: 'bold', fontSize: '0.9rem', color: '#333' }}>เบอร์โทรศัพท์ของคุณ:</label>
-              <input type="tel" required value={phoneInput} onChange={(e) => setPhoneInput(e.target.value)} placeholder="กรอกเบอร์โทร 10 หลัก เช่น 0812345678" style={{ width: '100%', padding: '0.75rem', borderRadius: '8px', border: '1px solid #ccc', boxSizing: 'border-box' }} />
+              <input type="tel" required value={phoneInput} onChange={(e) => setPhoneInput(e.target.value)} placeholder="กรอกเบอร์โทร 10 หลัก" style={{ width: '100%', padding: '0.75rem', borderRadius: '8px', border: '1px solid #ccc', boxSizing: 'border-box' }} />
             </div>
             <button type="submit" style={{ backgroundColor: '#0052cc', color: 'white', border: 'none', padding: '0.8rem', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold', fontSize: '1.1rem' }}>
               🔓 ยืนยันสิทธิ์เข้าเรียน
@@ -248,7 +249,7 @@ export default function ClassroomPage() {
                 value={selectedCourse}
                 onChange={(e) => {
                   setSelectedCourse(e.target.value);
-                  setCurrentlesson(null);
+                  setCurrentLesson(null);
                 }}
                 style={{ backgroundColor: '#ffffff', color: '#111', border: 'none', padding: '0.3rem 0.6rem', borderRadius: '6px', fontSize: '0.85rem', fontWeight: 'bold', cursor: 'pointer', outline: 'none' }}
               >
@@ -357,7 +358,7 @@ export default function ClassroomPage() {
                 <div 
                   key={lesson.id}
                   onClick={() => {
-                    setCurrentlesson(lesson);
+                    setCurrentLesson(lesson);
                     setQuizSubmitted(false);
                     setSelectedAnswers({});
                   }}
@@ -373,13 +374,22 @@ export default function ClassroomPage() {
 
       </div>
 
-      {/* 📝 [ป๊อปอัปชุดข้อสอบกากบาทพรีเมียม] */}
+      {/* 📝 [ป๊อปอัปชุดข้อสอบกากบาทพร้อมกล่องสรุปคะแนนรวมแบนเนอร์สีฟ้าพรีเมียม] */}
       {showQuizModal && (
         <div style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', backgroundColor: 'rgba(0,0,0,0.6)', display: 'flex', justifyContent: 'center', zIndex: 2000, alignItems: 'center' }}>
           <div style={{ backgroundColor: 'white', padding: '2rem', borderRadius: '16px', maxWidth: '600px', width: '95%', maxHeight: '85vh', overflowY: 'auto', boxShadow: '0 20px 40px rgba(0,0,0,0.3)' }}>
-            <h3 style={{ fontSize: '1.4rem', margin: '0 0 1.5rem 0', borderBottom: '2px solid #ff9f43', paddingBottom: '0.5rem', color: '#222' }}>
+            <h3 style={{ fontSize: '1.4rem', margin: '0 0 1rem 0', borderBottom: '2px solid #ff9f43', paddingBottom: '0.5rem', color: '#222' }}>
               📝 คลังข้อสอบประจำบทเรียน: {activeLesson.title}
             </h3>
+
+            {/* [แถบกล่องสรุปคะแนนรวมพรีเมียม] ทำงานทันทีเมื่อกดส่งข้อสอบสำเร็จ */}
+            {quizSubmitted && (
+              <div style={{ backgroundColor: '#e6f7ff', border: '1px solid #91d5ff', padding: '1.2rem', borderRadius: '10px', textAlign: 'center', marginBottom: '1.5rem', boxShadow: '0 4px 10px rgba(145,213,255,0.2)' }}>
+                <span style={{ fontSize: '1.1rem', color: '#0050b3', fontWeight: 'bold', display: 'block', marginBottom: '0.2rem' }}>📊 สรุปผลการทดสอบของคุณ</span>
+                <span style={{ fontSize: '1.8rem', fontWeight: 'bold', color: '#0050b3' }}>ได้คะแนน {rawScoreCount} / {activeQuestions.length} แต้ม</span>
+                <p style={{ margin: '0.3rem 0 0 0', fontSize: '0.85rem', color: '#555' }}>ระบบอัปเดตข้อมูลสถิติเรียบร้อยแล้ว สามารถตรวจทานป้ายเฉลยอธิบายได้ที่ข้อสอบด้านล่างคร้าบบ 👇</p>
+              </div>
+            )}
             
             <form onSubmit={(e) => handleQuizSubmit(e, activeQuestions)}>
               {activeQuestions.map((q: any, qIdx: number) => (
