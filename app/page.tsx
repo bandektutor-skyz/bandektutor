@@ -1,12 +1,18 @@
 'use client';
 import { useState } from 'react';
+import { supabase } from '../supabaseClient'; // นำเข้ากุญแจเชื่อมต่อหลังบ้าน Supabase ตัวจริง
 
 export default function HomePage() {
-  // ระบบจัดการสถานะ: ป็อปอัปสมัครเรียน และ ป็อปอัปเข้าสู่ระบบนักเรียน
+  // ระบบจัดการสถานะป็อปอัป และตัวแปรเก็บข้อมูลฟอร์มสมัครเรียน
   const [selectedCourse, setSelectedCourse] = useState<string | null>(null);
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [username, setUsername] = useState('');
+  
+  // ตัวแปรรับค่าจากฟอร์มแจ้งโอนเงิน
+  const [studentName, setStudentName] = useState('');
+  const [studentPhone, setStudentPhone] = useState('');
+  const [statusMessage, setStatusMessage] = useState('');
 
   // ข้อมูลคอร์สเรียนเตรียมสอบข้าราชการเชิงกลยุทธ์การตลาด
   const courses = [
@@ -42,10 +48,45 @@ export default function HomePage() {
     }
   };
 
+  // ฟังก์ชันหลักส่งข้อมูลใบสมัครยิงตรงเข้าฐานข้อมูล Supabase หลังบ้านตัวจริง
+  const handlePaymentSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setStatusMessage('⏳ กำลังส่งข้อมูลสลิปและบันทึกใบสมัคร...');
+
+    try {
+      // สั่งยิงข้อมูล 3 ค่าหลัก เข้าตารางที่ชื่อว่า enrollment
+      const { data, error } = await supabase
+        .from('enrollment')
+        .insert([
+          {
+            student_name: studentName,
+            student_phone: studentPhone,
+            course_title: selectedCourse
+          }
+        ]);
+
+      if (error) throw error;
+
+      setStatusMessage('✅ บันทึกใบสมัครสำเร็จ! เจ้าหน้าที่จะตรวจสอบและเปิดระบบห้องเรียนให้ภายใน 15 นาทีครับ');
+      
+      // ล้างข้อมูลในฟอร์มเมื่อส่งเสร็จ
+      setStudentName('');
+      setStudentPhone('');
+      setTimeout(() => {
+        setSelectedCourse(null);
+        setStatusMessage('');
+      }, 3000);
+
+    } catch (error: any) {
+      console.error(error);
+      setStatusMessage(`❌ เกิดข้อผิดพลาดหลังบ้าน: ${error.message}`);
+    }
+  };
+
   return (
     <div style={{ fontFamily: '"ChulaCharasNew", "Helvetica Neue", sans-serif', color: '#333', backgroundColor: '#fdfdfd', minHeight: '100vh' }}>
       
-      {/* 1. แถบเมนูด้านบน (Navbar) เชื่อมโยงตรงไปยังโฟลเดอร์ /classroom แบบปลอดภัยสูงด้วย alignItems */}
+      {/* 1. แถบเมนูด้านบน (Navbar) */}
       <nav style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '1rem 2rem', backgroundColor: '#ffffff', boxShadow: '0 2px 4px rgba(0,0,0,0.05)', position: 'sticky', top: 0, zIndex: 100 }}>
         <div style={{ fontWeight: 'bold', fontSize: '1.5rem', color: '#0070f3', display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }} onClick={() => window.location.href = '/'}>
           🎓 บ้านเด็กติวเตอร์
@@ -70,7 +111,7 @@ export default function HomePage() {
         </div>
       </nav>
 
-      {/* 2. ส่วนโปรโมทหลัก (Hero Section) แท็กนำทางข้ามหน้าต่างสำเร็จรูป */}
+      {/* 2. ส่วนโปรโมทหลัก (Hero Section) */}
       <header style={{ padding: '5rem 2rem', textAlign: 'center', color: 'white', background: 'linear-gradient(135deg, #0052cc 0%, #00a4ff 100%)' }}>
         <h1 style={{ fontSize: '3rem', marginBottom: '1rem', fontWeight: '800', letterSpacing: '-0.5px' }}>
           สานฝันเส้นทางข้าราชการกับ "บ้านเด็กติวเตอร์"
@@ -81,19 +122,7 @@ export default function HomePage() {
         <div style={{ display: 'flex', justifyContent: 'center', gap: '1rem' }}>
           <a 
             href="/classroom"
-            style={{ 
-              backgroundColor: '#fff', 
-              color: '#0052cc', 
-              border: 'none', 
-              padding: '0.8rem 2rem', 
-              borderRadius: '30px', 
-              fontSize: '1.1rem', 
-              fontWeight: 'bold', 
-              cursor: 'pointer', 
-              boxShadow: '0 4px 14px rgba(0,0,0,0.15)',
-              textDecoration: 'none',
-              display: 'inline-block'
-            }}
+            style={{ backgroundColor: '#fff', color: '#0052cc', border: 'none', padding: '0.8rem 2rem', borderRadius: '30px', fontSize: '1.1rem', fontWeight: 'bold', cursor: 'pointer', boxShadow: '0 4px 14px rgba(0,0,0,0.15)', textDecoration: 'none', display: 'inline-block' }}
           >
             🚀 คลิกเข้าสู่ห้องเรียนจำลองฟรีวันนี้
           </a>
@@ -124,7 +153,6 @@ export default function HomePage() {
                 </p>
               </div>
 
-              {/* [แก้ไขจุดที่ 1 และ 2] เปลี่ยนจาก itemsAlign เป็น alignItems ให้ถูกต้องตามมาตรฐาน */}
               <div style={{ padding: '1.5rem 2rem', backgroundColor: '#fafafa', borderTop: '1px solid #e1e8ed', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <div>
                   <span style={{ fontSize: '0.85rem', color: '#888', display: 'block' }}>ราคาคอร์ส</span>
@@ -142,9 +170,8 @@ export default function HomePage() {
           ))}
         </div>
 
-        {/* ระบบแจ้งชำระเงินและสมัครเรียนพร้อมอัปโหลดสลิป */}
+        {/* ระบบแจ้งชำระเงินและฟอร์มยิงข้อมูลเข้าฐานข้อมูล Supabase */}
         {selectedCourse && (
-          /* [แก้ไขจุดที่ 3] เปลี่ยนจาก itemsAlign เป็น alignItems เพื่อแก้ Error บรรทัดที่ 114 และ 127 */
           <div style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', justifyContent: 'center', zIndex: 1000, alignItems: 'center' }}>
             <div style={{ backgroundColor: 'white', padding: '2rem', borderRadius: '16px', maxWidth: '500px', width: '90%', maxHeight: '90vh', overflowY: 'auto', boxShadow: '0 20px 40px rgba(0,0,0,0.2)' }}>
               <div style={{ fontSize: '2.5rem', marginBottom: '0.5rem', textAlign: 'center' }}>💳</div>
@@ -157,14 +184,36 @@ export default function HomePage() {
                 <p style={{ margin: 0 }}>ชื่อบัญชี: <strong>บจก. บ้านเด็กติวเตอร์ (ประเทศไทย)</strong></p>
               </div>
 
-              <form onSubmit={(e) => { e.preventDefault(); alert('✅ ส่งหลักฐานการโอนเงินเรียบร้อย! เจ้าหน้าที่จะตรวจสอบและเปิดระบบให้ภายใน 15 นาทีครับ'); setSelectedCourse(null); }} style={{ display: 'flex', flexDirection: 'column', gap: '1rem', textAlign: 'left' }}>
+              {/* แสดงข้อความสถานะการบันทึกฐานข้อมูล */}
+              {statusMessage && (
+                <div style={{ padding: '1rem', marginBottom: '1rem', borderRadius: '8px', backgroundColor: statusMessage.includes('❌') ? '#fff0f0' : '#f6ffed', border: statusMessage.includes('❌') ? '1px solid #ffa39e' : '1px solid #b7eb8f', color: '#333', fontSize: '0.95rem', fontWeight: 'bold' }}>
+                  {statusMessage}
+                </div>
+              )}
+
+              {/* ฟอร์มรับข้อมูลเชื่อมโยง State ไปส่งหา Supabase */}
+              <form onSubmit={handlePaymentSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1rem', textAlign: 'left' }}>
                 <div>
                   <label style={{ display: 'block', marginBottom: '0.3rem', fontWeight: 'bold', fontSize: '0.9rem' }}>ชื่อ-นามสกุล ผู้สมัคร:</label>
-                  <input type="text" required placeholder="เช่น สมชาย ตั้งใจเรียน" style={{ width: '100%', padding: '0.6rem', borderRadius: '6px', border: '1px solid #ccc', boxSizing: 'border-box' }} />
+                  <input 
+                    type="text" 
+                    required 
+                    value={studentName}
+                    onChange={(e) => setStudentName(e.target.value)}
+                    placeholder="เช่น สมชาย ตั้งใจเรียน" 
+                    style={{ width: '100%', padding: '0.6rem', borderRadius: '6px', border: '1px solid #ccc', boxSizing: 'border-box' }} 
+                  />
                 </div>
                 <div>
                   <label style={{ display: 'block', marginBottom: '0.3rem', fontWeight: 'bold', fontSize: '0.9rem' }}>เบอร์โทรศัพท์ติดต่อ:</label>
-                  <input type="tel" required placeholder="เช่น 098-7654321" style={{ width: '100%', padding: '0.6rem', borderRadius: '6px', border: '1px solid #ccc', boxSizing: 'border-box' }} />
+                  <input 
+                    type="tel" 
+                    required 
+                    value={studentPhone}
+                    onChange={(e) => setStudentPhone(e.target.value)}
+                    placeholder="เช่น 098-7654321" 
+                    style={{ width: '100%', padding: '0.6rem', borderRadius: '6px', border: '1px solid #ccc', boxSizing: 'border-box' }} 
+                  />
                 </div>
                 <div>
                   <label style={{ display: 'block', marginBottom: '0.3rem', fontWeight: 'bold', fontSize: '0.9rem' }}>แนบภาพสลิปการโอนเงิน:</label>
@@ -182,7 +231,6 @@ export default function HomePage() {
 
         {/* ป๊อปอัปฟอร์มเข้าสู่ระบบนักเรียน (Student Login Modal) */}
         {showLoginModal && (
-          /* [แก้ไขจุดที่ 4] เปลี่ยนจาก itemsAlign เป็น alignItems เพื่อแก้ Error บรรทัดที่ 146 และ 184 */
           <div style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', justifyContent: 'center', zIndex: 1000, alignItems: 'center' }}>
             <div style={{ backgroundColor: 'white', padding: '2.5rem', borderRadius: '16px', maxWidth: '400px', width: '90%', textAlign: 'center', boxShadow: '0 20px 40px rgba(0,0,0,0.2)' }}>
               <div style={{ fontSize: '2.5rem', marginBottom: '0.5rem' }}>🔐</div>
