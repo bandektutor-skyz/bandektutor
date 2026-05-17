@@ -1,349 +1,178 @@
 'use client';
 import { useState } from 'react';
-import { supabase } from '../supabaseClient'; // ดึงตัวเชื่อมต่อหลังบ้านตัวจริง
+import Link from 'next/link';
 
 export default function HomePage() {
-  // ระบบจัดการสถานะป็อปอัป และตัวแปรเก็บข้อมูลฟอร์มสมัครเรียน
-  const [selectedCourse, setSelectedCourse] = useState<string | null>(null);
-  const [showLoginModal, setShowLoginModal] = useState(false);
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [username, setUsername] = useState(''); // เก็บเบอร์โทรศัพท์ตอนล็อกอินพิมพ์
-  const [displayStudentName, setDisplayStudentName] = useState(''); // แสดงชื่อจริงเมื่อเช็คผ่าน
-  
-  // ตัวแปรรับค่าจากฟอร์มแจ้งโอนเงิน
-  const [studentName, setStudentName] = useState('');
-  const [studentPhone, setStudentPhone] = useState('');
-  const [slipFile, setSlipFile] = useState<File | null>(null); // ช่องเก็บไฟล์รูปภาพสลิปจริง
-  const [statusMessage, setStatusMessage] = useState('');
-  const [loginErrorMessage, setLoginErrorMessage] = useState('');
-
-  // คลังข้อมูลคอร์สเรียนเตรียมสอบข้าราชการและตำรวจครบถ้วน 5 คอร์สใหญ่
-  const courses = [
+  // 📰 คลังข้อมูลข่าวสารเกาะติดสถานการณ์สอบ (Exam News Hub) แสดงผลหน้าแรก
+  const examNews = [
     {
       id: 1,
-      title: '🥇 คอร์สติวสอบ ก.พ. ภาค ก. (ฉบับผ่านชัวร์)',
-      description: 'เจาะลึกวิชาคณิตศาสตร์ ภาษาไทย และภาษาอังกฤษ สรุปเทคนิคคิดเร็วที่ใช้สอบได้จริง พร้อมแนวข้อสอบเสมือนจริงกว่า 500 ข้อ',
-      price: 1500,
-      badge: 'ยอดนิยม 🔥'
+      badge: '🔥 เปิดสอบด่วน',
+      badgeColor: 'bg-red-100 text-red-800 border-red-200',
+      title: 'กองการสอบ ประกาศรับสมัครข้าราชการตำรวจชั้นประทวน (นสต.) ล็อตใหม่เต็มพิกัด!',
+      detail: 'เปิดรับสายปราบปรามชาย ยอดรวมกว่า 1,200 อัตรา รับสมัครทางอินเทอร์เน็ตตลอด 24 ชั่วโมง เตรียมตัวฝึกข้อสอบ Pre-test ด่วน',
+      date: 'อัปเดตล่าสุด: วันนี้'
     },
     {
       id: 2,
-      title: '⚖️ คอร์สกฎหมายข้าราชการที่ดี (ทุกสนามสอบ)',
-      description: 'สรุปพระราชบัญญัติและกฎหมายที่ออกสอบบ่อยที่สุด จำง่ายด้วยเทคนิคคำกลอนและ Mind Map อ่านจบพร้อมเก็บคะแนนเต็ม',
-      price: 990,
-      badge: 'คุ้มค่า 💡'
+      badge: '📢 ประกาศผล',
+      badgeColor: 'bg-green-100 text-green-800 border-green-200',
+      title: 'ประกาศผลคะแนนสอบข้อเขียน นายสิบตำรวจ สายอำนวยการ (อก.) รอบล่าสุด',
+      detail: 'สามารถตรวจรายชื่อผู้ผ่านการคัดเลือกและกำหนดการยื่นเอกสารรายงานตัวได้ที่ลิงก์ทางการ หรือเช็คแนวข้อสอบจำลองเตรียมสอบรอบแก้ตัวได้ในคอร์ส',
+      date: 'อัปเดตล่าสุด: 2 วันที่ผ่านมา'
     },
     {
       id: 3,
-      title: '🏛️ คอร์สติวสอบข้าราชการท้องถิ่น (ภาค ก. + ภาค ข.)',
-      description: 'ติวเจาะลึกเก็งข้อสอบตรงประเด็นสำหรับสอบท้องถิ่นโดยเฉพาะ รวม พ.ร.บ. จัดตั้งท้องถิ่นครบทุกฉบับ พร้อมแนวข้อสอบเก่า',
-      price: 2500,
-      badge: 'แนะนำ ⭐'
-    },
-    {
-      id: 4,
-      title: '👮 คอร์สติวสอบ นายสิบตำรวจ (นสต. สายปราบปราม)',
-      description: 'ติวเข้ม 6 วิชาหลัก ความสามารถทั่วไป, ภาษาไทย, ภาษาอังกฤษ, กฎหมายที่ประชาชนควรรู้, คอมพิวเตอร์ และเทคโนโลยีสารสนเทศ เจาะข้อสอบเก่าแน่น ๆ',
-      price: 1990,
-      badge: 'มาใหม่ 🚨'
-    },
-    {
-      id: 5,
-      title: '💼 คอร์สติวสอบ นายสิบตำรวจ (สายอำนวยการและสนับสนุน)',
-      description: 'เจาะลึกเนื้อหาสำหรับสายอก. โดยเฉพาะ เน้นวิชาสารบรรณ งานธุรการ คอมพิวเตอร์ สังคมวัฒนธรรม จริยธรรม และภาษาต่างประเทศ พร้อมสรุปสูตรลัด',
-      price: 1890,
-      badge: 'แนะนำ 🎯'
+      badge: '🗓️ 定กำหนดการ',
+      badgeColor: 'bg-blue-100 text-blue-800 border-blue-200',
+      title: 'ปฏิทินสอบ ก.พ. ภาค ก. ประจำปี (รอบ Paper & Pencil และ e-Exam)',
+      detail: 'สรุปวันประกาศรายชื่อผู้สมัคร วันจัดสถานที่สอบ และเทคนิคการตีโจทย์ร้อยละ-อนุกรม เพื่อเก็บคะแนนวิชาความสามารถทั่วไปให้ผ่านเกณฑ์',
+      date: 'อัปเดตล่าสุด: สัปดาห์นี้'
     }
   ];
 
-  // ฟังก์ชันหลักดักจับไฟล์รูปภาพตอนที่นักเรียนเลือกไฟล์สลิป
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      setSlipFile(e.target.files[0]);
+  // 🛍️ รายการการ์ดสินค้าคอร์สเรียนและ Pre-test อัปเกรดใหม่ (เน้น Pure Test Engine ไม่มีวิดีโอ)
+  const featuredCourses = [
+    {
+      id: 'gov-part-a',
+      badge: 'มาใหม่ 📝',
+      badgeColor: 'text-red-600 bg-red-50 border-red-100',
+      title: 'คอร์สลุยข้อสอบ ก.พ. ภาค ก. (บททดสอบแยกตามหัวข้อ)',
+      description: 'ตะลุยคลังโจทย์ประยุกต์หนาแน่นแยกตามหัวข้อวิชา ความสามารถทั่วไป ภาษาไทย ภาษาอังกฤษ และการเป็นข้าราชการที่ดี เพื่อความเสถียรแม่นยำในการสอบ',
+      price: '1,590',
+    },
+    {
+      id: 'police-nst-quiz',
+      badge: 'แนะนำ 👮‍♂️',
+      badgeColor: 'text-blue-600 bg-blue-50 border-blue-100',
+      title: 'คอร์สลุยข้อสอบ นายสิบตำรวจ นสต. (ตะลุยโจทย์แยกรายวิชา)',
+      description: 'เน้นเก็งข้อสอบจริง เจาะลึก 5 บททดสอบต่อหนึ่งรายวิชา วิชาละ 50 ข้อตัวฟูล ครบถ้วน 6 วิชาหลักปราบปราม ไร้วิดีโอกวนใจ โหลดไวเน้นทำโจทย์',
+      price: '1,790',
+    },
+    {
+      id: 'police-ok-quiz',
+      badge: 'ติวเข้ม 💼',
+      badgeColor: 'text-amber-700 bg-amber-50 border-amber-100',
+      title: 'คอร์สลุยข้อสอบนายสิบตำรวจ อก. (ตะลุยโจทย์แยกรายวิชา)',
+      description: 'หลักสูตรตะลุยโจทย์สำหรับสายธุรการและสารบรรณโดยเฉพาะ วิชาละ 5 บททดสอบจุใจ พร้อมเพิ่มคลังข้อสอบวิชาระเบียบงานสารบรรณ พ.ศ. 2526 ตัวอัปเดตล่าสุด',
+      price: '1,690',
+    },
+    {
+      id: 'pretest-nst',
+      badge: 'ม็อคเสมือนจริง 🏆',
+      badgeColor: 'text-indigo-600 bg-indigo-50 border-indigo-100',
+      title: 'คอร์ส Pre-test ข้อสอบเสมือนจริง นสต. (จับเวลา 180 นาที)',
+      description: 'ระบบ Pure Test Engine จำลองสนามสอบจริง 5 ชุดข้อสอบ ชุดละ 150 ข้อเต็ม มีนาฬิกานับถอยหลัง 3 ชั่วโมง กดย้อนกลับ-เดินหน้าข้ามข้อสอบได้อิสระ พร้อมสรุปคะแนนทันที',
+      price: '1,990',
+    },
+    {
+      id: 'pretest-ok',
+      badge: 'สอบเสมือนจริง 🏅',
+      badgeColor: 'text-emerald-600 bg-emerald-50 border-emerald-100',
+      title: 'คอร์ส Pre-test ข้อสอบเสมือนจริง อก. (จับเวลา 180 นาที)',
+      description: 'แบบทดสอบม็อคเอ็กแซมฟูลสเกล 5 ชุดจัดเต็ม สัดส่วนข้อสอบ 150 ข้อตรงตามเกณฑ์กองการสอบสายอำนวยการ ควบคุมเวลา 180 นาทีเสมือนนั่งในห้องสอบจริง',
+      price: '1,890',
     }
-  };
-
-  // ฟังก์ชันวิ่งไปเช็คข้อมูลใน Supabase พร้อมแจกตั๋วความจำข้ามหน้าต่างอัตโนมัติ
-  const handleLoginSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoginErrorMessage('⏳ กำลังตรวจสอบรายชื่อในฐานข้อมูลหลังบ้าน...');
-    try {
-      const { data, error } = await supabase
-        .from('enrollment')
-        .select('*')
-        .eq('student_phone', username.trim())
-        .eq('status', 'อนุมัติแล้ว');
-
-      if (error) throw error;
-
-      if (data && data.length > 0) {
-        const currentStudent = data[0];
-        setDisplayStudentName(currentStudent.student_name);
-        setIsLoggedIn(true);
-        setShowLoginModal(false);
-        setLoginErrorMessage('');
-        localStorage.setItem('user_phone', currentStudent.student_phone);
-        localStorage.setItem('user_name', currentStudent.student_name);
-        localStorage.setItem('user_course', currentStudent.course_title);
-      } else {
-        setIsLoggedIn(false);
-        setLoginErrorMessage('❌ ไม่พบสิทธิ์! เบอร์โทรนี้ยังไม่ได้ลงทะเบียน หรือแอดมินยังไม่ได้กดอนุมัติเข้าเรียนครับ');
-      }
-    } catch (error: any) {
-      setLoginErrorMessage(`❌ ระบบเชื่อมต่อผิดพลาด: ${error.message}`);
-    }
-  };
-
-  // [จุดอัปเกรดสำคัญ] ฟังก์ชันส่งใบสมัครตัวฟูล สั่งอัปโหลดรูปภาพสลิปจริงขึ้น Storage และบันทึกลิงก์คู่รายชื่อ
-  const handlePaymentSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!slipFile) {
-      setStatusMessage('❌ กรุณาแนบภาพสลิปการโอนเงินก่อนส่งระบบครับ');
-      return;
-    }
-
-    setStatusMessage('⏳ กำลังอัปโหลดรูปภาพสลิปเข้าสู่ระบบคลาวด์...');
-    let imageUrl = '';
-
-    try {
-      // 1. ตั้งชื่อไฟล์ใหม่ด้วยเบอร์โทร + เวลาปัจจุบันเพื่อไม่ให้ชื่อไฟล์ซ้ำกันในคลังคลาวด์
-      const fileExt = slipFile.name.split('.').pop();
-      const fileName = `${studentPhone}_${Date.now()}.${fileExt}`;
-
-      // 2. สั่งยิงไฟล์รูปภาพตัวจริงเข้าสู่ Bucket หลังบ้านที่ชื่อว่า slips
-      const { data: uploadData, error: uploadError } = await supabase.storage
-        .from('slips')
-        .upload(fileName, slipFile);
-
-      if (uploadError) throw uploadError;
-
-      // 3. ดึงลิงก์รูปภาพสาธารณะ (Public URL) ตัวจริงกลับมาใช้งาน
-      const { data: publicUrlData } = supabase.storage
-        .from('slips')
-        .getPublicUrl(fileName);
-
-      imageUrl = publicUrlData.publicUrl;
-
-      setStatusMessage('⏳ บันทึกรูปภาพสำเร็จ กำลังบันทึกข้อมูลใบสมัครเรียน...');
-
-      // 4. สั่งเซฟข้อมูลอักษรพร้อมตัว "ลิงก์รูปภาพสลิป" ตัวจริงลงตาราง enrollment หลังบ้าน
-      const { error: insertError } = await supabase
-        .from('enrollment')
-        .insert([
-          {
-            student_name: studentName,
-            student_phone: studentPhone,
-            course_title: selectedCourse,
-            slip_url: imageUrl // บันทึกลิงก์รูปภาพตัวจริงลงฐานข้อมูลอย่างสมบูรณ์แบบ
-          }
-        ]);
-
-      if (insertError) throw insertError;
-
-      setStatusMessage('✅ บันทึกใบสมัครสำเร็จและอัปโหลดสลิปเรียบร้อย! เจ้าหน้าที่จะตรวจสอบยอดเงินภายใน 15 นาทีครับ');
-      
-      setStudentName('');
-      setStudentPhone('');
-      setSlipFile(null);
-      setTimeout(() => {
-        setSelectedCourse(null);
-        setStatusMessage('');
-      }, 4000);
-
-    } catch (error: any) {
-      console.error(error);
-      setStatusMessage(`❌ เกิดข้อผิดพลาดหลังบ้าน: ${error.message}`);
-    }
-  };
+  ];
 
   return (
-    <div style={{ fontFamily: '"ChulaCharasNew", "Helvetica Neue", sans-serif', color: '#333', backgroundColor: '#fdfdfd', minHeight: '100vh' }}>
-      {/* 1. แถบเมนูด้านบน (Navbar) */}
-      <nav style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '1rem 2rem', backgroundColor: '#ffffff', boxShadow: '0 2px 4px rgba(0,0,0,0.05)', position: 'sticky', top: 0, zIndex: 100 }}>
-        <div style={{ fontWeight: 'bold', fontSize: '1.5rem', color: '#0070f3', display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }} onClick={() => window.location.href = '/'}>
-          🎓 บ้านเด็กติวเตอร์
+    <div className="min-h-screen bg-slate-50 text-slate-800 font-sans">
+      {/* 🚀 ฮีโร่แบนเนอร์ด้านบนสุดสง่างาม */}
+      <div className="bg-gradient-to-r from-blue-600 via-blue-700 to-indigo-800 text-white text-center py-16 px-4 shadow-inner relative overflow-hidden">
+        <div className="max-w-4xl mx-auto space-y-4 relative z-10">
+          <h2 className="text-3xl md:text-5xl font-extrabold tracking-tight">
+            สานฝันเส้นทางข้าราชการและผู้พิทักษ์สันติราษฎร์
+          </h2>
+          <p className="text-sm md:text-lg text-blue-100 font-light max-w-2xl mx-auto">
+            เตรียมพร้อมให้เหนือกว่าด้วยคลังข้อสอบจำลองเสมือนจริง และระบบจับเวลาอัจฉริยะ 180 นาที เพื่อสถิติผลสัมฤทธิ์สูงสุดในการสอบราชการ
+          </p>
+          <div className="pt-2">
+            <Link href="/classroom" className="inline-block bg-white text-blue-700 font-bold px-6 py-3 rounded-xl shadow-lg hover:bg-blue-50 transition-all text-sm">
+              เข้าสู่ระบบห้องเรียนหลังบ้าน 🎓
+            </Link>
+          </div>
         </div>
-        <div style={{ display: 'flex', gap: '1.5rem', fontWeight: '500', alignItems: 'center' }}>
-          <span style={{ cursor: 'pointer', color: '#0070f3' }}>หน้าแรก</span>
-          <span style={{ cursor: 'pointer', color: '#666' }} onClick={() => window.location.href = '/classroom'}>ห้องเรียนออนไลน์</span>
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,_var(--tw-gradient-stops))] from-blue-500/20 via-transparent to-transparent z-0"></div>
+      </div>
+
+      {/* 📊 เนื้อหาหลักจัดระเบียบ 2 แผงคู่ขนาน (แผงข่าวสารซ้าย - แผงคอร์สขวา) */}
+      <div className="max-w-7xl mx-auto px-4 py-10 md:py-12">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
           
-          {isLoggedIn ? (
-            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-              <span style={{ color: '#28a745', fontWeight: 'bold' }}>👤 สวัสดี, คุณ {displayStudentName}</span>
-              <button 
-                onClick={() => { 
-                  localStorage.removeItem('user_phone');
-                  localStorage.removeItem('user_name');
-                  localStorage.removeItem('user_course');
-                  setIsLoggedIn(false); 
-                  setUsername(''); 
-                }} 
-                style={{ backgroundColor: '#dc3545', color: 'white', border: 'none', padding: '0.5rem 1rem', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold' }}
-              >
-                ออกจากระบบ
-              </button>
+          {/* 📰 แผงฝั่งซ้าย: ข่าวสารการสอบเกาะติดสถานการณ์ (Exam News Hub) */}
+          <div className="lg:col-span-1 space-y-4 lg:sticky lg:top-6">
+            <div className="bg-white rounded-2xl shadow-md border border-slate-200 p-5">
+              <div className="flex items-center gap-2 pb-3 mb-4 border-b border-slate-100">
+                <span className="text-xl">📰</span>
+                <h3 className="font-extrabold text-lg text-slate-800 tracking-tight">เกาะติดข่าวสารการสอบ</h3>
+              </div>
+              <div className="space-y-4">
+                {examNews.map((news) => (
+                  <div key={news.id} className="p-4 bg-slate-50 rounded-xl border border-slate-100 shadow-xs hover:shadow-sm transition-all">
+                    <span className={`inline-block text-[10px] font-extrabold px-2.5 py-0.5 rounded-full border mb-2 uppercase tracking-wider ${news.badgeColor}`}>
+                      {news.badge}
+                    </span>
+                    <h4 className="font-bold text-sm text-slate-800 leading-snug mb-1">{news.title}</h4>
+                    <p className="text-xs text-slate-500 leading-relaxed mb-2.5">{news.detail}</p>
+                    <span className="text-[10px] text-slate-400 block font-semibold">{news.date}</span>
+                  </div>
+                ))}
+              </div>
             </div>
-          ) : (
-            <button 
-              onClick={() => { setShowLoginModal(true); setLoginErrorMessage(''); }}
-              style={{ backgroundColor: '#0070f3', color: 'white', border: 'none', padding: '0.5rem 1.2rem', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold', boxShadow: '0 2px 6px rgba(0,112,243,0.3)' }}
-            >
-              🔐 เข้าสู่ระบบนักเรียน
-            </button>
-          )}
-        </div>
-      </nav>
+          </div>
 
-      {/* 2. ส่วนโปรโมทหลัก (Hero Section) */}
-      <header style={{ padding: '5rem 2rem', textAlign: 'center', color: 'white', background: 'linear-gradient(135deg, #0052cc 0%, #00a4ff 100%)' }}>
-        <h1 style={{ fontSize: '3rem', marginBottom: '1rem', fontWeight: '800', letterSpacing: '-0.5px' }}>
-          สานฝันเส้นทางข้าราชการและผู้พิทักษ์สันติราษฎร์
-        </h1>
-        <p style={{ fontSize: '1.3rem', marginBottom: '2.5rem', opacity: 0.9, maxWidth: '800px', margin: '0 auto 2.5rem auto', lineHeight: '1.6' }}>
-          เปลี่ยนเรื่องยากให้เป็นเรื่องง่าย โจทย์ยากแค่ไหนก็ผ่านฉลุยด้วยสูตรลัดเฉพาะตัว ติวจัดเต็มวิชาหลักเพื่อความสำเร็จของคุณวันนี้
-        </p>
-        <div style={{ display: 'flex', justifyContent: 'center', gap: '1rem' }}>
-          <a 
-            href="/classroom"
-            style={{ backgroundColor: '#fff', color: '#0052cc', border: 'none', padding: '0.8rem 2rem', borderRadius: '30px', fontSize: '1.1rem', fontWeight: 'bold', cursor: 'pointer', boxShadow: '0 4px 14px rgba(0,0,0,0.15)', textDecoration: 'none', display: 'inline-block' }}
-          >
-            🚀 คลิกเข้าสู่ห้องเรียนออนไลน์ตัวจริง
-          </a>
-        </div>
-      </header>
-
-      {/* 3. ส่วนแสดงรายชื่อคอร์สเรียน (Course Grid) */}
-      <main style={{ maxWidth: '1200px', margin: '0 auto', padding: '4rem 2rem' }}>
-        <div style={{ textAlign: 'center', marginBottom: '3rem' }}>
-          <h2 style={{ fontSize: '2.2rem', color: '#111', marginBottom: '0.5rem' }}>🎯 คอร์สติวสอบราชการและตำรวจยอดนิยม</h2>
-          <p style={{ color: '#666', fontSize: '1.1rem' }}>เลือกคอร์สที่ใช่เพื่ออนาคตข้าราชการที่มั่นคงของคุณ</p>
-        </div>
-
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(340px, 1fr))', gap: '2rem' }}>
-          {courses.map((course) => (
-            <div key={course.id} style={{ backgroundColor: '#fff', border: '1px solid #e1e8ed', borderRadius: '16px', overflow: 'hidden', boxShadow: '0 10px 20px rgba(0,0,0,0.03)', transition: 'transform 0.2s', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
-              
-              <div style={{ padding: '2rem' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-                  <span style={{ backgroundColor: '#e6f0ff', color: '#0070f3', padding: '0.3rem 0.8rem', borderRadius: '20px', fontSize: '0.85rem', fontWeight: 'bold' }}>
-                    {course.badge}
-                  </span>
-                </div>
-                <h3 style={{ fontSize: '1.4rem', color: '#111', marginBottom: '1rem', marginTop: 0, lineHeight: '1.4' }}>
-                  {course.title}
+          {/* 🛍️ แผงฝั่งขวา: รายการการ์ดสินค้าคอร์สเรียนที่เปิดรับสมัครพร้อมปุ่มกด */}
+          <div className="lg:col-span-2 space-y-6">
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-2 px-2 mb-2">
+              <div>
+                <h3 className="text-xl font-extrabold text-slate-900 tracking-tight flex items-center gap-2">
+                  <span>🎯</span> คอร์สติวสอบราชการและตำรวจยอดนิยม
                 </h3>
-                <p style={{ color: '#555', fontSize: '0.98rem', lineHeight: '1.6', margin: 0 }}>
-                  {course.description}
-                </p>
+                <p className="text-xs text-slate-500 mt-0.5">เลือกคอร์สที่ต้องการสมัครเพื่อเปิดสิทธิ์ลุยข้อสอบในระบบได้ทันที</p>
               </div>
-
-              <div style={{ padding: '1.5rem 2rem', backgroundColor: '#fafafa', borderTop: '1px solid #e1e8ed', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <div>
-                  <span style={{ fontSize: '0.85rem', color: '#888', display: 'block' }}>ราคาคอร์ส</span>
-                  <span style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#111' }}>฿{course.price.toLocaleString()}</span>
-                </div>
-                <button 
-                  onClick={() => setSelectedCourse(course.title)}
-                  style={{ backgroundColor: '#0070f3', color: 'white', border: 'none', padding: '0.7rem 1.5rem', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold', fontSize: '1rem', boxShadow: '0 4px 10px rgba(0,112,243,0.2)' }}
-                >
-                  สมัครเรียนเลย
-                </button>
-              </div>
-
             </div>
-          ))}
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {featuredCourses.map((course) => (
+                <div key={course.id} className="bg-white rounded-2xl shadow-sm border border-slate-200 p-5 md:p-6 flex flex-col justify-between hover:shadow-md transition-all relative group overflow-hidden">
+                  <div>
+                    <div className="mb-3">
+                      <span className={`inline-block text-[11px] font-extrabold px-2.5 py-1 rounded-md border tracking-wide uppercase ${course.badgeColor}`}>
+                        {course.badge}
+                      </span>
+                    </div>
+                    <h4 className="font-extrabold text-slate-900 text-lg leading-snug mb-2 group-hover:text-blue-600 transition-colors">
+                      {course.title}
+                    </h4>
+                    <p className="text-xs text-slate-500 leading-relaxed font-normal mb-6">
+                      {course.description}
+                    </p>
+                  </div>
+
+                  <div className="pt-4 border-t border-slate-100 flex items-center justify-between gap-4">
+                    <div>
+                      <span className="text-[10px] text-slate-400 block font-bold uppercase tracking-wider">ราคาคอร์ส</span>
+                      <span className="text-xl font-black text-slate-900">฿{course.price}</span>
+                    </div>
+                    <Link 
+                      href="/classroom" 
+                      className="bg-blue-600 hover:bg-blue-700 text-white font-extrabold text-xs py-3 px-5 rounded-xl shadow-md hover:shadow-lg transition-all flex items-center gap-1.5"
+                    >
+                      สมัครเรียนเลย 🚀
+                    </Link>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
         </div>
+      </div>
 
-        {/* ระบบแจ้งชำระเงินและฟอร์มรับรูปสลิปส่งเข้าคลาวด์ Storage */}
-        {selectedCourse && (
-          <div style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', justifyContent: 'center', zIndex: 1000, alignItems: 'center' }}>
-            <div style={{ backgroundColor: 'white', padding: '2rem', borderRadius: '16px', maxWidth: '500px', width: '90%', maxHeight: '90vh', overflowY: 'auto', boxShadow: '0 20px 40px rgba(0,0,0,0.2)' }}>
-              <div style={{ fontSize: '2.5rem', marginBottom: '0.5rem', textAlign: 'center' }}>💳</div>
-              <h3 style={{ fontSize: '1.4rem', marginBottom: '1rem', textAlign: 'center' }}>ขั้นตอนการชำระเงินสมัครเรียน</h3>
-              <p style={{ color: '#555', marginBottom: '1rem', textAlign: 'center' }}>คุณเลือก: <strong style={{ color: '#0070f3' }}>{selectedCourse}</strong></p>
-              
-              <div style={{ backgroundColor: '#f0f4f8', padding: '1rem', borderRadius: '8px', marginBottom: '1.5rem', fontSize: '0.95rem' }}>
-                <p style={{ margin: '0 0 0.5rem 0' }}>🏦 <strong>ธนาคารกสิกรไทย (K-Bank)</strong></p>
-                <p style={{ margin: '0 0 0.5rem 0' }}>เลขที่บัญชี: <strong>123-4-56789-0</strong></p>
-                <p style={{ margin: 0 }}>ชื่อบัญชี: <strong>บจก. บ้านเด็กติวเตอร์ (ประเทศไทย)</strong></p>
-              </div>
-
-              {statusMessage && (
-                <div style={{ padding: '1rem', marginBottom: '1rem', borderRadius: '8px', backgroundColor: statusMessage.includes('❌') ? '#fff0f0' : '#f6ffed', border: statusMessage.includes('❌') ? '1px solid #ffa39e' : '1px solid #b7eb8f', color: '#333', fontSize: '0.95rem', fontWeight: 'bold' }}>
-                  {statusMessage}
-                </div>
-              )}
-
-              <form onSubmit={handlePaymentSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1rem', textAlign: 'left' }}>
-                <div>
-                  <label style={{ display: 'block', marginBottom: '0.3rem', fontWeight: 'bold', fontSize: '0.9rem' }}>ชื่อ-นามสกุล ผู้สมัคร:</label>
-                  <input type="text" required value={studentName} onChange={(e) => setStudentName(e.target.value)} placeholder="เช่น สมชาย ตั้งใจเรียน" style={{ width: '100%', padding: '0.6rem', borderRadius: '6px', border: '1px solid #ccc', boxSizing: 'border-box' }} />
-                </div>
-                <div>
-                  <label style={{ display: 'block', marginBottom: '0.3rem', fontWeight: 'bold', fontSize: '0.9rem' }}>เบอร์โทรศัพท์ติดต่อ:</label>
-                  <input type="tel" required value={studentPhone} onChange={(e) => setStudentPhone(e.target.value)} placeholder="เช่น 098-7654321" style={{ width: '100%', padding: '0.6rem', borderRadius: '6px', border: '1px solid #ccc', boxSizing: 'border-box' }} />
-                </div>
-                <div>
-                  <label style={{ display: 'block', marginBottom: '0.3rem', fontWeight: 'bold', fontSize: '0.9rem' }}>แนบภาพสลิปการโอนเงิน:</label>
-                  {/* ผูกฟังก์ชัน onChange เพื่อดักจับไฟล์รูปภาพสลิปจริงของคอร์สตำรวจ */}
-                  <input type="file" required accept="image/*" onChange={handleFileChange} style={{ width: '100%', padding: '0.5rem 0' }} />
-                </div>
-                
-                <div style={{ display: 'flex', gap: '0.5rem', marginTop: '1rem' }}>
-                  <button type="button" onClick={() => setSelectedCourse(null)} style={{ flex: 1, backgroundColor: '#666', color: 'white', border: 'none', padding: '0.7rem', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold' }}>ยกเลิก</button>
-                  <button type="submit" style={{ flex: 2, backgroundColor: '#28a745', color: 'white', border: 'none', padding: '0.7rem', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold' }}>📤 ส่งสลิปแจ้งชำระเงิน</button>
-                </div>
-              </form>
-            </div>
-          </div>
-        )}
-
-        {/* ป๊อปอัปฟอร์มเข้าสู่ระบบนักเรียน */}
-        {showLoginModal && (
-          <div style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', justifyContent: 'center', zIndex: 1000, alignItems: 'center' }}>
-            <div style={{ backgroundColor: 'white', padding: '2.5rem', borderRadius: '16px', maxWidth: '400px', width: '90%', textAlign: 'center', boxShadow: '0 20px 40px rgba(0,0,0,0.2)' }}>
-              <div style={{ fontSize: '2.5rem', marginBottom: '0.5rem' }}>🔐</div>
-              <h3 style={{ fontSize: '1.4rem', marginBottom: '1.5rem' }}>เข้าสู่ระบบนักเรียน</h3>
-              
-              {loginErrorMessage && (
-                <div style={{ padding: '0.8rem', marginBottom: '1rem', borderRadius: '6px', backgroundColor: loginErrorMessage.includes('❌') ? '#fff0f0' : '#e6f0ff', color: loginErrorMessage.includes('❌') ? '#dc3545' : '#0052cc', fontSize: '0.85rem', fontWeight: 'bold', textAlign: 'left' }}>
-                  {loginErrorMessage}
-                </div>
-              )}
-
-              <form onSubmit={handleLoginSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1rem', textAlign: 'left' }}>
-                <div>
-                  <label style={{ display: 'block', marginBottom: '0.3rem', fontWeight: 'bold', fontSize: '0.9rem' }}>เบอร์โทรศัพท์ที่ใช้สมัครเรียน:</label>
-                  <input 
-                    type="tel" 
-                    required 
-                    value={username}
-                    onChange={(e) => setUsername(e.target.value)}
-                    placeholder="กรอกเบอร์โทร 10 หลักของคุณ" 
-                    style={{ width: '100%', padding: '0.6rem', borderRadius: '6px', border: '1px solid #ccc', boxSizing: 'border-box' }} 
-                  />
-                </div>
-                <div>
-                  <label style={{ display: 'block', marginBottom: '0.3rem', fontWeight: 'bold', fontSize: '0.9rem' }}>รหัสผ่านความปลอดภัย (ใส่รหัสใดก็ได้):</label>
-                  <input type="password" required placeholder="••••••••" style={{ width: '100%', padding: '0.6rem', borderRadius: '6px', border: '1px solid #ccc', boxSizing: 'border-box' }} />
-                </div>
-                
-                <div style={{ display: 'flex', gap: '0.5rem', marginTop: '1rem' }}>
-                  <button type="button" onClick={() => setShowLoginModal(false)} style={{ flex: 1, backgroundColor: '#666', color: 'white', border: 'none', padding: '0.7rem', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold' }}>ปิด</button>
-                  <button type="submit" style={{ flex: 2, backgroundColor: '#0070f3', color: 'white', border: 'none', padding: '0.7rem', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold' }}>🔓 ยืนยันเข้าสู่ระบบ</button>
-                </div>
-              </form>
-            </div>
-          </div>
-        )}
-      </main>
-
-      {/* 4. ส่วนท้ายเว็บ */}
-      <footer style={{ backgroundColor: '#111', color: '#888', padding: '3rem 2rem', textAlign: 'center', borderTop: '1px solid #222' }}>
-        <p style={{ margin: 0, fontSize: '0.95rem' }}>© 2026 บ้านเด็กติวเตอร์ (Bandektutor) - สงวนลิขสิทธิ์ทุกประการ</p>
-        <p style={{ marginTop: '0.5rem', fontSize: '0.85rem', color: '#555' }}>พัฒนาโดยแพลตฟอร์ม Next.js + Node.js ระดับมืออาชีพ</p>
+      {/* 👣 ฟุตเตอร์ส่วนท้ายเว็บบางเบาสวยงาม */}
+      <footer className="bg-white border-t border-slate-200 mt-16 py-6 text-center text-xs text-slate-400 font-medium">
+        <p>© 2026 บ้านเด็กติวเตอร์ (BANDEXTUTOR). All Rights Reserved. ระบบเตรียมสอบราชการอัจฉริยะ</p>
       </footer>
-
     </div>
   );
 }
