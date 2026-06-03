@@ -155,40 +155,55 @@ function ClassroomPretestContent() {
     checkAndLoadQuestions();
   }, [courseParam, studentPhone, myCourses, router]);
 
-  // 📝 6. ฟังก์ชันโหลดคำถามชุดใหญ่เรียงแถวตรงตามเลข ID จากตารางหลังบ้าน Supabase
+    // 📝 6. ฟังก์ชันโหลดคำถามชุดใหญ่ พร้อมระบบจัดระเบียบเรียงคิววิชาภาษาอังกฤษไปปิดท้ายเล่มอัตโนมัติ (แก้ไขปัญหาข้อสลับแทรก 100%)
   const startPretest = async (setCode: string, setTitle: string) => {
-    setQuizSubmitted(false);
-    setSelectedAnswers({});
-    setCurrentQuestionIndex(0);
+    setQuizSubmitted(false); 
+    setSelectedAnswers({}); 
+    setCurrentQuestionIndex(0); 
     setActiveQuestions([]);
-    setTimeLeft(180 * 60);
+    setTimeLeft(180 * 60); 
     setIsTimerRunning(true);
     setLiveExamScore('กำลังทดสอบ ⏳');
-
+    
     try {
+      // 🎯 ดึงข้อสอบทั้งหมดขึ้นมาจากคลังก่อน
       const { data, error } = await supabase
         .from('questions')
         .select('*')
-        .eq('subject_code', setCode)
-        .order('id', { ascending: true });
+        .eq('subject_code', setCode);
 
       if (error) throw error;
 
       if (data && data.length > 0) {
-        setActiveQuestions(data);
+        // 🚀 อัลกอริทึมจัดระเบียบสารบัญข้อสอบ: สแกนหาคำสำคัญในตัวโจทย์เพื่อจัดหมวดหมู่ส่งท้ายเล่ม
+        const sortedQuestions = [...data].sort((a, b) => {
+          // ตรวจสอบเช็กว่าเป็นข้อสอบหมวดวิชาภาษาอังกฤษหรือไม่ (เช็กจากชื่อฟิลด์ย่อย หรือ คำศัพท์เฉพาะกลุ่ม)
+          const isAEnglish = (a.subject_name?.toLowerCase().includes('eng') || a.question_text?.match(/[a-zA-Z]{4,}\s/g)) ? 1 : 0;
+          const isBEnglish = (b.subject_name?.toLowerCase().includes('eng') || b.question_text?.match(/[a-zA-Z]{4,}\s/g)) ? 1 : 0;
+
+          // 💡 กฎเหล็ก: ถ้าตัวไหนเป็นภาษาอังกฤษ ให้ดีดเด้งผลลัพธ์ไปต่อคิวท้ายสุดของอาร์เรย์ร้อยเปอร์เซ็นต์
+          if (isAEnglish !== isBEnglish) {
+            return isAEnglish - isBEnglish; 
+          }
+          
+          // ถ้าเป็นวิชาบรรยายทั่วไปในกลุ่มเดียวกัน ให้เรียงแถวตามลำดับตัวเลข ID น้อยไปมากตามปกติ
+          return a.id - b.id;
+        });
+
+        setActiveQuestions(sortedQuestions); 
       } else {
-        setActiveQuestions([{
-          id: 9999,
-          question_text: `📌 ข้อสอบฟูลสเกล 150 ข้อของชุด ${setTitle} กำลังอัปโหลดเข้าระบบเร็วๆ นี้ครับ...`,
-          choice_a: 'เตรียมความพร้อม',
-          choice_b: 'รับทราบ',
-          choice_c: 'อ่านทบทวนเนื้อหา',
-          choice_d: 'ลุยสอบสนามจริง',
-          correct_choice: 'choice_a'
+        setActiveQuestions([{ 
+          id: 9999, 
+          question_text: `📌 ข้อสอบฟูลสเกล 150 ข้อของชุด ${setTitle} กำลังอัปโหลดเข้าระบบเร็วๆ นี้ครับ...`, 
+          choice_a: 'เตรียมความพร้อม', 
+          choice_b: 'รับทราบ', 
+          choice_c: 'อ่านทบทวนเนื้อหา', 
+          choice_d: 'ลุยสอบสนามจริง', 
+          correct_choice: 'choice_a' 
         }]);
       }
-    } catch (err) {
-      console.error('Fetch pretest questions error:', err);
+    } catch (err) { 
+      console.error('Fetch and Sort pretest questions error:', err); 
     }
   };
 
