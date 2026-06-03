@@ -212,15 +212,15 @@ function ClassroomPretestContent() {
     const s = seconds % 60;
     return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
   };
-  // 🏆 9. ฟังก์ชันคำนวณแยก 2 ภาคหลักสูตร และบันทึกคะแนนสอบลงคลังเกณฑ์ตำรวจ 60% ของแท้
+    // 🏆 9. ฟังก์ชันคำนวณคะแนนแบบแปรผันตามหลักสูตรคอร์สเรียน (คอร์ส 12 แยก 2 ภาควิชา / คอร์ส 9 และ 10 คิดคะแนนรวมปกติ)
   const submitQuiz = async () => {
     if (quizSubmitted) return;
     setIsTimerRunning(false);
-
+    
     let totalCorrect = 0;
     let part1Correct = 0; // ภาคความรู้ความสามารถทั่วไป (ข้อ 1-40)
     let part2Correct = 0; // ภาคความรู้ความสามารถที่ใช้เฉพาะตำแหน่ง (ข้อ 41-150)
-
+    
     const part1Total = 40;
     const part2Total = 110;
     const grandTotal = activeQuestions.length || 150;
@@ -244,27 +244,49 @@ function ClassroomPretestContent() {
     const part2Percent = (part2Correct / part2Total) * 100;
     const totalPercent = (totalCorrect / grandTotal) * 100;
 
-    const isPart1Passed = part1Percent >= 60;
-    const isPart2Passed = part2Percent >= 60;
-    const isAllPassed = isPart1Passed && isPart2Passed;
+    // 🔍 ระบบแยกเลนตรวจสิทธิ์เกณฑ์อัจฉริยะดักทางตามคำสั่งพาร์ทเนอร์
+    const isCourse12 = currentCourse.includes('สาย อก./สพฐ.ตร.') || currentCourse.includes('หลักสูตรใหม่ล่าสุด') || currentCourse.includes('12');
+    
+    let isAllPassed = false;
+    let passedStatusText = '';
+    let reportAlertText = '';
 
-    const passedStatusText = isAllPassed ? 'ผ่านเกณฑ์ข้าราชการตำรวจ 🎉' : 'ยังไม่ผ่านเกณฑ์ (ต้องผ่าน 60% ทั้ง 2 ภาควิชา) ❌';
+    if (isCourse12) {
+      // 👮‍♂️ สเปกตำรวจคอร์ส 12: กฎเหล็กแยกตรวจ 60% ทั้งสองภาคส่วน
+      const isPart1Passed = part1Percent >= 60;
+      const isPart2Passed = part2Percent >= 60;
+      isAllPassed = isPart1Passed && isPart2Passed;
+      passedStatusText = isAllPassed ? 'ผ่านเกณฑ์ข้าราชการตำรวจ 🎉' : 'ยังไม่ผ่านเกณฑ์ (ต้องผ่าน 60% ทั้ง 2 ภาควิชา) ❌';
+      
+      reportAlertText = 
+        `📊 [สรุปรายงานผลคะแนนสอบเสมือนจริงฟูลสเกล สาย อก./สพฐ.ตร.]\n` +
+        `------------------------------------------\n` +
+        `📝 ผลคะแนนรวมทั้งหมด: ${totalCorrect} / ${grandTotal} ข้อ (${totalPercent.toFixed(0)}%)\n\n` +
+        `🔸 1. ภาคความรู้ความสามารถทั่วไป (ข้อ 1-40)\n` +
+        `   - คะแนนที่ทำได้: ${part1Correct} / ${part1Total} ข้อ\n` +
+        `   - คิดเป็นเปอร์เซ็นต์: ${part1Percent.toFixed(0)}%\n` +
+        `   - ประเมินผลภาค 1: ${isPart1Passed ? '✅ ผ่านเกณฑ์ (60% ขึ้นไป)' : '❌ ไม่ผ่านเกณฑ์'}\n\n` +
+        `🔹 2. ภาคความรู้ความสามารถที่ใช้เฉพาะตำแหน่ง (ข้อ 41-150)\n` +
+        `   - คะแนนที่ทำได้: ${part2Correct} / ${part2Total} ข้อ\n` +
+        `   - คิดเป็นเปอร์เซ็นต์: ${part2Percent.toFixed(0)}%\n` +
+        `   - ประเมินผลภาค 2: ${isPart2Passed ? '✅ ผ่านเกณฑ์ (60% ขึ้นไป)' : '❌ ไม่ผ่านเกณฑ์'}\n` +
+        `------------------------------------------\n` +
+        `🏆 สรุปประเมินภาพรวมหลักสูตร: ${passedStatusText}`;
+    } else {
+      // 🎓 สเปกคอร์ส 9 และ 10: คิดคะแนนรวมภาพรวมผ่าน 60% ปกติแบบสัมฤทธิผลสากล
+      isAllPassed = totalPercent >= 60;
+      passedStatusText = isAllPassed ? 'ผ่านเกณฑ์คะแนนรวมทดสอบแล้ว 🎉' : 'ยังไม่ผ่านเกณฑ์คะแนนรวม (เกณฑ์ผ่าน 60% ขึ้นไป) ❌';
+      
+      reportAlertText = 
+        `📊 [สรุปรายงานผลคะแนนสอบพรีเทสเสมือนจริง]\n` +
+        `------------------------------------------\n` +
+        `📝 คะแนนที่ทำได้จริง: ${totalCorrect} / ${grandTotal} ข้อ\n` +
+        `📈 คิดเป็นสัดส่วนร้อยละ: ${totalPercent.toFixed(0)}%\n` +
+        `------------------------------------------\n` +
+        `🏆 ผลการประเมินวิเคราะห์: ${passedStatusText}`;
+    }
 
-    alert(
-      `📊 [สรุปรายงานผลคะแนนสอบเสมือนจริงฟูลสเกล]\n` +
-      `------------------------------------------\n` +
-      `📝 ผลคะแนนรวมทั้งหมด: ${totalCorrect} / ${grandTotal} ข้อ (${totalPercent.toFixed(0)}%)\n\n` +
-      `🔸 1. ภาคความรู้ความสามารถทั่วไป (ข้อ 1-40)\n` +
-      `   - คะแนนที่ทำได้: ${part1Correct} / ${part1Total} ข้อ\n` +
-      `   - คิดเป็นเปอร์เซ็นต์: ${part1Percent.toFixed(0)}%\n` +
-      `   - ประเมินผลภาค 1: ${isPart1Passed ? '✅ ผ่านเกณฑ์ (60% ขึ้นไป)' : '❌ ไม่ผ่านเกณฑ์'}\n\n` +
-      `🔹 2. ภาคความรู้ความสามารถที่ใช้เฉพาะตำแหน่ง (ข้อ 41-150)\n` +
-      `   - คะแนนที่ทำได้: ${part2Correct} / ${part2Total} ข้อ\n` +
-      `   - คิดเป็นเปอร์เซ็นต์: ${part2Percent.toFixed(0)}%\n` +
-      `   - ประเมินผลภาค 2: ${isPart2Passed ? '✅ ผ่านเกณฑ์ (60% ขึ้นไป)' : '❌ ไม่ผ่านเกณฑ์'}\n` +
-      `------------------------------------------\n` +
-      `🏆 สรุปประเมินภาพรวมหลักสูตร: ${passedStatusText}`
-    );
+    alert(reportAlertText);
 
     setLiveExamScore(`สรุปผลสอบ: ${passedStatusText} \n ได้คะแนนรวม ${totalCorrect}/${grandTotal} ข้อ (${totalPercent.toFixed(0)}%)`);
     setQuizSubmitted(true);
@@ -273,7 +295,7 @@ function ClassroomPretestContent() {
       await supabase.from('quiz_attempts').insert([
         {
           student_phone: studentPhone,
-          subject_name: `${currentCourse} (Pre-test)`,
+          subject_name: `${currentCourse} (Pre-test)`, 
           score_obtained: totalCorrect,
           total_questions: grandTotal,
           passed_status: isAllPassed ? 'ผ่านเกณฑ์' : 'ไม่ผ่านเกณฑ์'
@@ -283,6 +305,7 @@ function ClassroomPretestContent() {
       console.error('Save quiz attempts error:', err);
     }
   };
+
 
   // 🚪 10. ฟังก์ชันออกจากระบบ
   const handleLogout = () => {
