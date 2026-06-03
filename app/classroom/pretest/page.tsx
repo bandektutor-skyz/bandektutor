@@ -204,14 +204,23 @@ function ClassroomPretestContent() {
     const part2Total = 110;
     const grandTotal = activeQuestions.length || 150;
 
-    activeQuestions.forEach((q, index) => {
+        activeQuestions.forEach((q, index) => {
       const questionNumber = index + 1;
       
-      // 🎯 อัปเกรดสูตรถอดรหัสเฉลยดักทางครอบจักรวาล (ตรวจเช็กทุกฟิลด์ ยืดหยุ่นสูงสุด ป้องกันคะแนนรวมขึ้น 0)
       const dbCorrect = q.correct_choice || q.correct_answer || '';
       const correctLetter = dbCorrect.toLowerCase().replace('choice_', '').trim().toUpperCase() || 'A';
       
-      const isCorrect = selectedAnswers[q.id] === correctLetter;
+      const studentChoice = selectedAnswers[q.id] || '';
+      const normalizeToLetter = (val: string) => {
+        const cleanVal = val.toString().trim().toUpperCase();
+        if (cleanVal === 'A' || cleanVal === 'ก' || cleanVal === 'N') return 'A';
+        if (cleanVal === 'B' || cleanVal === 'ข' || cleanVal === 'CH' || cleanVal === 'ช') return 'B';
+        if (cleanVal === 'C' || cleanVal === 'ค') return 'C';
+        if (cleanVal === 'D' || cleanVal === 'ง') return 'D';
+        return cleanVal;
+      };
+
+      const isCorrect = normalizeToLetter(studentChoice) === correctLetter;
 
 
       if (isCorrect) {
@@ -358,24 +367,38 @@ function ClassroomPretestContent() {
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', marginBottom: '1.5rem' }}>
                   {['A', 'B', 'C', 'D'].map(opt => {
                     const q = activeQuestions[currentQuestionIndex];
-                    const isSel = selectedAnswers[q.id] === opt;
 
-                    // 🎯 อัปเกรดสูตรถอดรหัสเฉลยแบบครอบจักรวาล (ดักเช็คค่าตัวพิมพ์เล็ก พิมพ์ใหญ่ และ choice_ ครบทุกร่อง)
+                    // 🎯 1. ถอดรหัสคำตอบที่ถูกต้องจากฐานข้อมูล Supabase (แปลง choice_a -> A)
                     const dbCorrect = q.correct_choice || q.correct_answer || '';
                     const correctLetter = dbCorrect.toLowerCase().replace('choice_', '').trim().toUpperCase() || 'A';
+
+                    // 🎯 2. ดึงคำตอบที่นักเรียนกดเลือกตอบจริงในระบบปัจจุบัน
+                    const studentChoice = selectedAnswers[q.id] || '';
+
+                    // 🎯 3. ฟังก์ชันอัจฉริยะแปลงค่าทุกภาษา (A/ก/n -> A) เพื่อใช้เปรียบเทียบสิทธิ์เกณฑ์ตรวจคะแนน
+                    const normalizeToLetter = (val: string) => {
+                      const cleanVal = val.toString().trim().toUpperCase();
+                      if (cleanVal === 'A' || cleanVal === 'ก' || cleanVal === 'N') return 'A';
+                      if (cleanVal === 'B' || cleanVal === 'ข' || cleanVal === 'ช') return 'B';
+                      if (cleanVal === 'C' || cleanVal === 'ค') return 'C';
+                      if (cleanVal === 'D' || cleanVal === 'ง') return 'D';
+                      return cleanVal;
+                    };
+
+                    const isSel = normalizeToLetter(studentChoice) === opt;
 
                     let opBg = isSel ? '#eff6ff' : '#ffffff';
                     let opBorder = isSel ? '2px solid #2563eb' : '1px solid #cbd5e1';
                     let opColor = isSel ? '#2563eb' : '#334155';
 
-                    // 🏆 เกาะระบายสีเฉลยเขียว-แดงเมื่อเด็กกดส่งกระดาษคำตอบแล้ว
+                    // 🏆 4. เกราะระบายสีเฉลยเขียว-แดงอัจฉริยะเมื่อกดส่งกระดาษคำตอบเสร็จสิ้นหน้าร้าน
                     if (quizSubmitted) {
                       if (correctLetter === opt) {
-                        opBg = '#dcfce7'; // ข้อสอบเฉลยถูก ดีดเป็นสีเขียวพรีเมียมถนอมสายตา
+                        opBg = '#dcfce7'; // เฉลยข้อที่ถูกต้อง ดีดสว่างเป็นสีเขียวพรีเมียมถนอมสายตา
                         opBorder = '2px solid #16a34a';
                         opColor = '#166534';
                       } else if (isSel) {
-                        opBg = '#fef2f2'; // ข้อที่เด็กกาผิด ดีดเป็นสีแดงคมชัดกริบ
+                        opBg = '#fef2f2'; // ข้อที่นักเรียนตอบผิด ดีดระบายเป็นสีแดงคมชัดกริบ
                         opBorder = '2px solid #ef4444';
                         opColor = '#991b1b';
                       }
@@ -401,7 +424,13 @@ function ClassroomPretestContent() {
                         }}>
                           {opt === 'A' ? 'ก' : opt === 'B' ? 'ข' : opt === 'C' ? 'ค' : 'ง'}
                         </span>
-                        <span style={{ fontSize: '0.98rem' }}>{q[`choice_${opt.toLowerCase()}`] || q[`option_${opt.toLowerCase()}`] || q[opt.toLowerCase()]}</span>
+                        {/* รองรับฟิลด์ชอยส์คำถามของพาร์ทเนอร์ทุกรูปแบบในตารางฐานข้อมูล */}
+                        <span style={{ fontSize: '0.98rem' }}>
+                          {opt === 'A' ? (q.choice_a || q.option_a || q.a) :
+                            opt === 'B' ? (q.choice_b || q.option_b || q.b) :
+                              opt === 'C' ? (q.choice_c || q.option_c || q.c) :
+                                (q.choice_d || q.option_d || q.d)}
+                        </span>
                       </div>
                     );
                   })}
