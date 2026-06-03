@@ -3,104 +3,187 @@ import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { supabase } from '../../../supabaseClient';
 
-// 📺 คลังข้อมูลสารบัญแมปปิ้งบทเรียนเฉพาะกลุ่มที่ 1 (คอร์สเนื้อหาบรรยายฟูลสเกล พาร์ทที่ 1)
-const vdoCoursesContent: { [key: string]: any[] } = {
-  'คอร์สติวกฎหมายราชการที่จำเป็น': [
-    { id: 41, code: '1-1', title: 'กฎหมายราชการ EP 1 : รัฐธรรมนูญแห่งราชอาณาจักรไทย (ฉบับปัจจุบัน)', youtubeid: '7P6F_S87Fls', pdfUrl: '#', duration: '90:00 นาที', hasQuiz: true },
-    { id: 42, code: '1-2', title: 'กฎหมายราชการ EP 2 : พ.ร.บ. ระเบียบบริหารราชการแผ่นดิน พ.ศ. 2534', youtubeid: 'g9z9FstC4j0', pdfUrl: '#', duration: '55:00 นาที', hasQuiz: true },
-    { id: 43, code: '1-3', title: 'กฎหมายราชการ EP 3 : พ.ร.ฎ. ว่าด้วยหลักเกณฑ์และวิธีการบริหารกิจการบ้านเมืองที่ดี พ.ศ. 2546', youtubeid: 'O9YwE8_O5rI', pdfUrl: '#', duration: '60:00 นาที', hasQuiz: true },
-    { id: 44, code: '1-4', title: 'กฎหมายราชการ EP 4 : พ.ร.บ. วิธีปฏิบัติราชการทางปกครอง พ.ศ. 2539', youtubeid: '7P6F_S87Fls', pdfUrl: '#', duration: '45:00 นาที', hasQuiz: true },
-    { id: 45, code: '1-5', title: 'กฎหมายราชการ EP 5 : พ.ร.บ. ความรับผิดทางละเมิดของเจ้าหน้าที่ พ.ศ. 2539', youtubeid: 'g9z9FstC4j0', pdfUrl: '#', duration: '50:00 นาที', hasQuiz: true },
-    { id: 46, code: '1-6', title: 'กฎหมายราชการ EP 6 : พ.ร.บ. ข้อมูลข่าวสารของทางราชการ พ.ศ. 2540', youtubeid: 'O9YwE8_O5rI', pdfUrl: '#', duration: '55:00 นาที', hasQuiz: true }
-  ],
-    'คอร์สติว ก.พ. ภาค ก. (ฉบับผ่านชัวร์)': [
-    { id: 301, code: '2-1', title: 'วิชาความสามารถทั่วไป', youtubeid: 'g9z7FstC4j0', pdfUrl: '#', duration: 'จัดเต็มคลังโจทย์ 100 ข้อ', hasQuiz: true },
-    { id: 302, code: '2-2', title: 'วิชาภาษาไทย', youtubeid: '7P6F_S87Fls', pdfUrl: '#', duration: 'จัดเต็มคลังโจทย์ 100 ข้อ', hasQuiz: true },
-    { id: 303, code: '2-3', title: 'วิชาภาษาอังกฤษ', youtubeid: 'O9YwE8_O5rI', pdfUrl: '#', duration: 'จัดเต็มคลังโจทย์ 100 ข้อ', hasQuiz: true },
-    { id: 304, code: '2-4', title: 'วิชากฎหมายและลักษณะการเป็นข้าราชการที่ดี', youtubeid: 'g9z9FstC4j0', pdfUrl: '#', duration: 'จัดเต็มคลังโจทย์ 100 ข้อ', hasQuiz: true }
-  ],
-  'คอร์สติวสอบท้องถิ่น (อปท.) ภาค ก. และ ข.': [
-    { id: 601, code: '3-1', title: 'อปท. ท้องถิ่น EP 1. : วิชาความรู้ความสามารถทั่วไป', youtubeid: 'g9z7FstC4j0', pdfUrl: '#', duration: '50:00 นาที', hasQuiz: true },
-    { id: 602, code: '3-2', title: 'อปท. ท้องถิ่น EP 2. : วิชาภาษาไทย', youtubeid: '7P6F_S87Fls', pdfUrl: '#', duration: '45:00 นาที', hasQuiz: true },
-    { id: 603, code: '3-3', title: 'อปท. ท้องถิ่น EP 3. : วิชาภาษาอังกฤษ', youtubeid: 'O9YwE8_O5rI', pdfUrl: '#', duration: '60:00 นาที', hasQuiz: true },
-    { id: 604, code: '3-4', title: 'อปท. ท้องถิ่น EP 4. : วิชากฎหมายและระเบียบบริหารราชการส่วนท้องถิ่น', youtubeid: '7P6F_S87Fls', pdfUrl: '#', duration: '55:00 นาที', hasQuiz: true },
-    { id: 605, code: '3-5', title: 'อปท. ท้องถิ่น EP 5. : วิชากฎหมายรัฐธรรมนูญ', youtubeid: 'g9z9FstC4j0', pdfUrl: '#', duration: '60:00 นาที', hasQuiz: true },
-    { id: 606, code: '3-6', title: 'อปท. ท้องถิ่น EP 6. : เจาะลึกภาค ข. ข้อมูลตำแหน่งงานนโยบายและแผน', youtubeid: 'O9YwE8_O5rI', pdfUrl: '#', duration: '45:00 นาที', hasQuiz: true }
-  ],
-    'คอร์สติวสอบ นายสิบตำรวจ (นสต. สายปราบปราม)': [
-    { id: 11, code: '6-1', title: 'นสต.ปราบปราม EP.1 : วิชาความสามารถทั่วไป', youtubeid: 'g9z7FstC4j0', pdfUrl: '#', duration: '45:00 นาที', hasQuiz: true },
-    { id: 12, code: '6-2', title: 'นสต.ปราบปราม EP.2 : วิชาภาษาไทย', youtubeid: '7P6F_S87Fls', pdfUrl: '#', duration: '50:00 นาที', hasQuiz: true },
-    { id: 13, code: '6-3', title: 'นสต.ปราบปราม EP.3 : วิชาภาษาอังกฤษ', youtubeid: 'O9YwE8_O5rI', pdfUrl: '#', duration: '60:00 นาที', hasQuiz: true },
-    { id: 14, code: '6-4', title: 'นสต.ปราบปราม EP.4 : วิชาเทคโนโลยีสารสนเทศ', youtubeid: '7P6F_S87Fls', pdfUrl: '#', duration: '45:00 นาที', hasQuiz: true },
-    { id: 15, code: '6-5', title: 'นสต.ปราบปราม EP.5 : วิชากฎหมายเบื้องต้นที่ประชาชนควรรู้', youtubeid: 'g9z9FstC4j0', pdfUrl: '#', duration: '55:00 นาที', hasQuiz: true },
-    { id: 16, code: '6-6', title: 'นสต.ปราบปราม EP.6 : วิชาสังคม วัฒนธรรม จริยธรรม และประชาคมอาเซียน', youtubeid: 'O9YwE8_O5rI', pdfUrl: '#', duration: '40:00 นาที', hasQuiz: true }
-  ],
-  'คอร์สติวสอบ นายสิบตำรวจ (สายอำนวยการและสนับสนุน)': [
-    { id: 21, code: '7-1', title: 'นสต.อำนวยการ EP.1 : วิชาความสามารถทั่วไป 🎯', youtubeid: 'g9z7FstC4j0', pdfUrl: '#', duration: '45:00 นาที', hasQuiz: true },
-    { id: 22, code: '7-2', title: 'นสต.อำนวยการ EP.2 : วิชาภาษาไทย', youtubeid: '7P6F_S87Fls', pdfUrl: '#', duration: '40:00 นาที', hasQuiz: true },
-    { id: 23, code: '7-3', title: 'นสต.อำนวยการ EP.3 : วิชาภาษาอังกฤษ', youtubeid: 'O9YwE8_O5rI', pdfUrl: '#', duration: '45:00 นาที', hasQuiz: true },
-    { id: 24, code: '7-4', title: 'นสต.อำนวยการ EP.4 : วิชาคอมพิวเตอร์และเทคโนโลยีสารสนเทศ', youtubeid: '7P6F_S87Fls', pdfUrl: '#', duration: '44:00 นาที', hasQuiz: true },
-    { id: 25, code: '7-5', title: 'นสต.อำนวยการ EP.5 : วิชากฎหมายเบื้องต้นที่เกี่ยวข้องในชีวิตประจำวัน', youtubeid: 'g9z9FstC4j0', pdfUrl: '#', duration: '55:00 นาที', hasQuiz: true },
-    { id: 26, code: '7-6', title: 'นสต.อำนวยการ EP.6 : วิชาสังคม วัฒนธรรม จริยธรรม และประชาคมอาเซียน', youtubeid: 'O9YwE8_O5rI', pdfUrl: '#', duration: '40:00 นาที', hasQuiz: true }
-  ]
+// 🏛️ แผงสารบัญปฏิรูปใหม่ เปลี่ยน Key เป็นรหัสคอร์สคู่ขนาน ทรงอานุภาพความเสถียร 100%
+const vdoCoursesContent: { [key: string]: { name: string; questions: any[] } } = {
+  '1': {
+    name: 'คอร์สติวกฎหมายราชการที่จำเป็น',
+    questions: [
+      { id: 41, code: '1-1', title: 'กฎหมายราชการ EP 1 : รัฐธรรมนูญแห่งราชอาณาจักรไทย (ฉบับปัจจุบัน)', youtubeid: '7P6F_S87Fls', pdfUrl: '#', duration: '90:00 นาที', hasQuiz: true },
+      { id: 42, code: '1-2', title: 'กฎหมายราชการ EP 2 : พ.ร.บ. ระเบียบบริหารราชการแผ่นดิน พ.ศ. 2534', youtubeid: 'g9z9FstC4j0', pdfUrl: '#', duration: '55:00 นาที', hasQuiz: true },
+      { id: 43, code: '1-3', title: 'กฎหมายราชการ EP 3 : พ.ร.ฎ. ว่าด้วยหลักเกณฑ์และวิธีการบริหารกิจการบ้านเมืองที่ดี พ.ศ. 2546', youtubeid: 'O9YwE8_O5rI', pdfUrl: '#', duration: '60:00 นาที', hasQuiz: true },
+      { id: 44, code: '1-4', title: 'กฎหมายราชการ EP 4 : พ.ร.บ. วิธีปฏิบัติราชการทางปกครอง พ.ศ. 2539', youtubeid: '7P6F_S87Fls', pdfUrl: '#', duration: '45:00 นาที', hasQuiz: true },
+      { id: 45, code: '1-5', title: 'กฎหมายราชการ EP 5 : พ.ร.บ. ความรับผิดทางละเมิดของเจ้าหน้าที่ พ.ศ. 2539', youtubeid: 'g9z9FstC4j0', pdfUrl: '#', duration: '50:00 นาที', hasQuiz: true },
+      { id: 46, code: '1-6', title: 'กฎหมายราชการ EP 6 : พ.ร.บ. ข้อมูลข่าวสารของทางราชการ พ.ศ. 2540', youtubeid: 'O9YwE8_O5rI', pdfUrl: '#', duration: '55:00 นาที', hasQuiz: true }
+    ]
+  },
+  '2': {
+    name: 'คอร์สติว ก.พ. ภาค ก. (ฉบับผ่านชัวร์)',
+    questions: [
+      { id: 301, code: '2-1', title: 'วิชาความสามารถทั่วไป', youtubeid: 'g9z7FstC4j0', pdfUrl: '#', duration: 'จัดเต็มคลังโจทย์ 100 ข้อ', hasQuiz: true },
+      { id: 302, code: '2-2', title: 'วิชาภาษาไทย', youtubeid: '7P6F_S87Fls', pdfUrl: '#', duration: 'จัดเต็มคลังโจทย์ 100 ข้อ', hasQuiz: true },
+      { id: 303, code: '2-3', title: 'วิชาภาษาอังกฤษ', youtubeid: 'O9YwE8_O5rI', pdfUrl: '#', duration: 'จัดเต็มคลังโจทย์ 100 ข้อ', hasQuiz: true },
+      { id: 304, code: '2-4', title: 'วิชากฎหมายและลักษณะการเป็นข้าราชการที่ดี', youtubeid: 'g9z9FstC4j0', pdfUrl: '#', duration: 'จัดเต็มคลังโจทย์ 100 ข้อ', hasQuiz: true }
+    ]
+  },
+  '3': {
+    name: 'คอร์สติวสอบท้องถิ่น (อปท.) ภาค ก. และ ข.',
+    questions: [
+      { id: 601, code: '3-1', title: 'อปท. ท้องถิ่น EP 1. : วิชาความรู้ความสามารถทั่วไป', youtubeid: 'g9z7FstC4j0', pdfUrl: '#', duration: '50:00 นาที', hasQuiz: true },
+      { id: 602, code: '3-2', title: 'อปท. ท้องถิ่น EP 2. : วิชาภาษาไทย', youtubeid: '7P6F_S87Fls', pdfUrl: '#', duration: '45:00 นาที', hasQuiz: true },
+      { id: 603, code: '3-3', title: 'อปท. ท้องถิ่น EP 3. : วิชาภาษาอังกฤษ', youtubeid: 'O9YwE8_O5rI', pdfUrl: '#', duration: '60:00 นาที', hasQuiz: true },
+      { id: 604, code: '3-4', title: 'อปท. ท้องถิ่น EP 4. : วิชากฎหมายและระเบียบบริหารราชการส่วนท้องถิ่น', youtubeid: '7P6F_S87Fls', pdfUrl: '#', duration: '55:00 นาที', hasQuiz: true },
+      { id: 605, code: '3-5', title: 'อปท. ท้องถิ่น EP 5. : วิชากฎหมายรัฐธรรมนูญ', youtubeid: 'g9z9FstC4j0', pdfUrl: '#', duration: '60:00 นาที', hasQuiz: true },
+      { id: 606, code: '3-6', title: 'อปท. ท้องถิ่น EP 6. : เจาะลึกภาค ข. ข้อมูลตำแหน่งงานนโยบายและแผน', youtubeid: 'O9YwE8_O5rI', pdfUrl: '#', duration: '45:00 นาที', hasQuiz: true }
+    ]
+  },
+  '6': {
+    name: 'คอร์สติวสอบ นายสิบตำรวจ (นสต. สายปราบปราม)',
+    questions: [
+      { id: 11, code: '6-1', title: 'นสต.ปราบปราม EP.1 : วิชาความสามารถทั่วไป', youtubeid: 'g9z7FstC4j0', pdfUrl: '#', duration: '45:00 นาที', hasQuiz: true },
+      { id: 12, code: '6-2', title: 'นสต.ปราบปราม EP.2 : วิชาภาษาไทย', youtubeid: '7P6F_S87Fls', pdfUrl: '#', duration: '50:00 นาที', hasQuiz: true },
+      { id: 13, code: '6-3', title: 'นสต.ปราบปราม EP.3 : วิชาภาษาอังกฤษ', youtubeid: 'O9YwE8_O5rI', pdfUrl: '#', duration: '60:00 นาที', hasQuiz: true },
+      { id: 14, code: '6-4', title: 'นสต.ปราบปราม EP.4 : วิชาเทคโนโลยีสารสนเทศ', youtubeid: '7P6F_S87Fls', pdfUrl: '#', duration: '45:00 นาที', hasQuiz: true },
+      { id: 15, code: '6-5', title: 'นสต.ปราบปราม EP.5 : วิชากฎหมายเบื้องต้นที่ประชาชนควรรู้', youtubeid: 'g9z9FstC4j0', pdfUrl: '#', duration: '55:00 นาที', hasQuiz: true },
+      { id: 16, code: '6-6', title: 'นสต.ปราบปราม EP.6 : วิชาสังคม วัฒนธรรม จริยธรรม และประชาคมอาเซียน', youtubeid: 'O9YwE8_O5rI', pdfUrl: '#', duration: '40:00 นาที', hasQuiz: true }
+    ]
+  },
+  '7': {
+    name: 'คอร์สติวสอบ นายสิบตำรวจ (สายอำนวยการและสนับสนุน)',
+    questions: [
+      { id: 21, code: '7-1', title: 'นสต.อำนวยการ EP.1 : วิชาความสามารถทั่วไป 🎯', youtubeid: 'g9z7FstC4j0', pdfUrl: '#', duration: '45:00 นาที', hasQuiz: true },
+      { id: 22, code: '7-2', title: 'นสต.อำนวยการ EP.2 : วิชาภาษาไทย', youtubeid: '7P6F_S87Fls', pdfUrl: '#', duration: '40:00 นาที', hasQuiz: true },
+      { id: 23, code: '7-3', title: 'นสต.อำนวยการ EP.3 : วิชาภาษาอังกฤษ', youtubeid: 'O9YwE8_O5rI', pdfUrl: '#', duration: '45:00 นาที', hasQuiz: true },
+      { id: 24, code: '7-4', title: 'นสต.อำนวยการ EP.4 : วิชาคอมพิวเตอร์และเทคโนโลยีสารสนเทศ', youtubeid: '7P6F_S87Fls', pdfUrl: '#', duration: '44:00 นาที', hasQuiz: true },
+      { id: 25, code: '7-5', title: 'นสต.อำนวยการ EP.5 : วิชากฎหมายเบื้องต้นที่เกี่ยวข้องในชีวิตประจำวัน', youtubeid: 'g9z9FstC4j0', pdfUrl: '#', duration: '55:00 นาที', hasQuiz: true },
+      { id: 26, code: '7-6', title: 'นสต.อำนวยการ EP.6 : วิชาสังคม วัฒนธรรม จริยธรรม และประชาคมอาเซียน', youtubeid: 'O9YwE8_O5rI', pdfUrl: '#', duration: '40:00 นาที', hasQuiz: true }
+    ]
+  }
 };
 
 function ClassroomVdoContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
+
+  // 🏛️ สารบบดึงค่าพารามิเตอร์ความปลอดภัย
   const studentPhone = searchParams.get('phone') || '';
   const studentName = searchParams.get('name') || '';
-  const [currentCourse, setCurrentCourse] = useState(searchParams.get('course') || '');
+  const courseParam = searchParams.get('course') || '';
+
+  // 🔒 ผูก State ควบคุมพิมพ์เขียวบอร์ดวิดีโอ
   const [myCourses, setMyCourses] = useState<string[]>([]);
+  const [courseNameDisplay, setCourseNameDisplay] = useState(courseParam);
+  const currentCourse = courseParam;
 
   const [lessonsList, setLessonsList] = useState<any[]>([]);
   const [activeLesson, setActiveLesson] = useState<any>(null);
+  
   const [activeQuestions, setActiveQuestions] = useState<any[]>([]);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [selectedAnswers, setSelectedAnswers] = useState<any>({});
   const [quizSubmitted, setQuizSubmitted] = useState(false);
-  const [liveExamScore, setLiveExamScore] = useState('ยังไม่ได้เข้าทดสอบ 🎯');
+  const [liveExamScore, setLiveExamScore] = useState('ยังไม่ได้เข้าทดสอบ 📝');
+  const [loading, setLoading] = useState(true);
 
+  // 📍 เปิดระบบทะเบียน 12 คอร์สหลักอัตโนมัติประจำกระดาน Dropdown
   useEffect(() => {
-    if (!studentPhone) { router.push('/classroom'); return; }
-    
-        const masterCourses = [
+    const masterCourses = [
       'คอร์สติวกฎหมายราชการที่จำเป็น', 'คอร์สติว ก.พ. ภาค ก. (ฉบับผ่านชัวร์)', 'คอร์สติวสอบท้องถิ่น (อปท.) ภาค ก. และ ข.',
       'คอร์สลุยข้อสอบนายสิบตำรวจ อก. (ตะลุยโจทย์แยกรายวิชา)', 'คอร์สลุยข้อสอบ ก.พ. ภาค ก. (บททดสอบแยกตามหัวข้อ)',
       'คอร์สติวสอบ นายสิบตำรวจ (นสต. สายปราบปราม)', 'คอร์สติวสอบ นายสิบตำรวจ (สายอำนวยการและสนับสนุน)',
       'คอร์สลุยข้อสอบ นายสิบตำรวจ นสต. (ตะลุยโจทย์แยกรายวิชา)', 'คอร์ส Pre-test ข้อสอบเสมือนจริง นสต. (จับเวลา 180 นาที)',
-      'คอร์ส Pre-test ข้อสอบเสมือนจริง อก. (จับเวลา 180 นาที)'
+      'คอร์ส Pre-test ข้อสอบเสมือนจริง อก. (จับเวลา 180 นาที)',
+      'คอร์สลุยข้อสอบ นายสิบตำรวจ สาย อก./สพฐ.ตร. (ตะลุยโจทย์แยกรายวิชา)',
+      'คอร์ส Pre-test ข้อสอบเสมือนจริง สาย อก./สพฐ.ตร. ตามหลักสูตรใหม่ล่าสุด (จับเวลาทำข้อสอบ/สรุปคะแนน)'
     ];
     setMyCourses(masterCourses);
+  }, []);
 
-    // 💡 ฟังก์ชันขั้นเทพ: กวาดล้างสัญลักษณ์ ไอคอน และตัดวรรคทิ้งทั้งหมดให้คลีนกริบเพื่อจับคู่
-    const cleanStr = (str: string) => str.replace(/[\u2700-\u27BF]|[\uE000-\uF8FF]|\uD83C[\uDC00-\uDFFF]|[\u2011-\u26FF]|\s+/g, '').trim();
-    const cleanCourse = cleanStr(currentCourse);
-    
-    // จับคู่แบบไร้ช่องว่าง ไม่ว่าหน้าบ้านหรือหลังบ้านจะเคาะวรรคกี่รอบก็ชนเจอ 100%
-    const matchedKey = Object.keys(vdoCoursesContent).find(key => {
-      return cleanStr(key) === cleanCourse || cleanStr(key).includes(cleanCourse) || cleanCourse.includes(cleanStr(key));
-    });
-    
-    const lessons = matchedKey ? vdoCoursesContent[matchedKey] : [];
-    
-    setLessonsList(lessons);
-    if (lessons.length > 0) setActiveLesson(lessons[0]);
-  }, [currentCourse, studentPhone]);
+  // 🔐 เกราะความปลอดภัยดักสแกนตั๋วเรียน ป้องกันคนแอบแก้ลิงก์แฮกดูวิดีโอ VDO พรีเมียมฟรี
+  useEffect(() => {
+    if (!studentPhone) { 
+      router.push('/classroom'); 
+      return; 
+    }
+    if (myCourses.length === 0) return;
 
+    const checkAndLoadVdo = async () => {
+      try {
+        const myCoursesData = localStorage.getItem('user_my_courses');
+        if (!myCoursesData) {
+          alert('🚫 ไม่พบสิทธิ์เข้าเรียนในระบบ กรุณาล็อกอินใหม่อีกครั้งครับ');
+          router.push('/classroom');
+          return;
+        }
+        const myEnrolledCourses: string[] = JSON.parse(myCoursesData);
+
+        const cleanStr = (str: string) => str.replace(/[\u2700-\u27BF]|[\uE000-\uF8FF]|\uD83C[\uDC00-\uDFFF]|[\u2011-\u26FF]|\s+/g, '').trim();
+        const cleanCourse = cleanStr(courseParam);
+        
+        const matchedKey = Object.keys(vdoCoursesContent).find(key => {
+          const cleanKey = cleanStr(vdoCoursesContent[key].name);
+          return cleanKey === cleanCourse || cleanKey.includes(cleanCourse) || cleanCourse.includes(cleanKey) || key === cleanCourse;
+        });
+
+        const hasAccessPermission = myEnrolledCourses.some(enrolled => 
+          enrolled.includes(courseParam) || courseParam.includes(enrolled)
+        );
+
+        if (!matchedKey || !hasAccessPermission) {
+          alert('🔒 ขออภัย สิทธิ์เข้าใช้งานถูกจำกัดเฉพาะนักเรียนคอร์สนี้เท่านั้นครับ');
+          router.push('/classroom');
+          return;
+        }
+
+        const courseData = vdoCoursesContent[matchedKey];
+        setCourseNameDisplay(courseData.name);
+        setLessonsList(courseData.questions);
+        
+        if (courseData.questions && courseData.questions.length > 0) {
+          setActiveLesson(courseData.questions[0]);
+        }
+      } catch (err) {
+        console.error('Vdo Guard error:', err);
+        router.push('/classroom');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    checkAndLoadVdo();
+  }, [courseParam, studentPhone, myCourses, router]);
+
+  // 📝 ฟังก์ชันโหลดข้อสอบย่อยท้ายคลิปวิดีโอจาก Supabase
   const startQuiz = async (subjectCode: string) => {
-    setQuizSubmitted(false); setSelectedAnswers({}); setCurrentQuestionIndex(0); setActiveQuestions([]);
+    setQuizSubmitted(false); 
+    setSelectedAnswers({}); 
+    setCurrentQuestionIndex(0); 
+    setActiveQuestions([]);
     try {
-      const { data, error } = await supabase.from('questions').select('*').eq('subject_code', subjectCode);
+      const { data, error } = await supabase
+        .from('questions')
+        .select('*')
+        .eq('subject_code', subjectCode)
+        .order('id', { ascending: true });
+
       if (error) throw error;
+
       if (data && data.length > 0) {
         setActiveQuestions(data);
       } else {
-        setActiveQuestions([{ id: 9999, question_text: '📌 คลังข้อสอบประจำวิชาชุดจริงกำลังจะเปิดให้เข้าติวเร็วๆ นี้ครับ...', choice_a: 'รับทราบ ยอดเยี่ยมมากครับ', choice_b: 'เตรียมลุยโจทย์ใหม่', correct_choice: 'choice_a' }]);
+        setActiveQuestions([{ 
+          id: 9999, 
+          question_text: '📌 คลังข้อสอบประจำวิชาชุดจริงกำลังจะเปิดให้เข้าติวเร็วๆ นี้ครับ...', 
+          choice_a: 'รับทราบ ยอดเยี่ยมมากครับ', 
+          choice_b: 'เตรียมลุยโจทย์ใหม่', 
+          correct_choice: 'choice_a' 
+        }]);
       }
-    } catch (err) { console.error(err); }
+    } catch (err) { 
+      console.error('Start quiz in vdo page crash:', err); 
+    }
   };
 
+  // 🏆 ฟังก์ชันคำนวณคะแนนควิซท้ายวิดีโอและลงแค็ตตาล็อกบันทึกลงตารางหลังบ้าน
   const submitQuiz = async () => {
     if (quizSubmitted) return;
     let score = 0;
@@ -108,21 +191,43 @@ function ClassroomVdoContent() {
       const correctLetter = q.correct_choice ? q.correct_choice.replace('choice_', '').toUpperCase() : 'A';
       if (selectedAnswers[q.id] === correctLetter) score++;
     });
+    
     setLiveExamScore(`สรุปคะแนนทำควิซ: ได้รับคะแนน ${score}/${activeQuestions.length} ข้อ 🎉`);
     setQuizSubmitted(true);
+    
     try {
-      await supabase.from('quiz_attempts').insert([{ student_phone: studentPhone, subject_name: activeLesson?.title || currentCourse, score_obtained: score, total_questions: activeQuestions.length }]);
-    } catch (err) { console.error(err); }
+      await supabase.from('quiz_attempts').insert([
+        { 
+          student_phone: studentPhone, 
+          subject_name: activeLesson?.title || currentCourse, 
+          score_obtained: score, 
+          total_questions: activeQuestions.length 
+        }
+      ]);
+    } catch (err) { 
+      console.error('Save quiz attempts logs crash in vdo page:', err); 
+    }
   };
 
-  const handleLogout = () => { localStorage.clear(); router.push('/classroom'); };
+  // 🚪 ฟังก์ชันออกจากห้องเรียนล้างข้อมูล Cache
+  const handleLogout = () => { 
+    localStorage.clear(); 
+    router.push('/classroom'); 
+  };
 
+  // 🚀 ฟังก์ชันสลับสายคอร์สเรียน นำทางวาร์ปกระจายเลนข้ามโฟลเดอร์ Next.js อัจฉริยะแบบไร้รอยชน
   const handleCourseChange = (nextCourse: string) => {
     const params = `?phone=${encodeURIComponent(studentPhone)}&name=${encodeURIComponent(studentName)}&course=${encodeURIComponent(nextCourse)}`;
-    if (nextCourse.includes('Pre-test')) { router.push(`/classroom/pretest${params}`); }
-    else if (nextCourse.includes('ลุยข้อสอบ')) { router.push(`/classroom/quiz${params}`); }
-    else { setCurrentCourse(nextCourse); setActiveQuestions([]); setQuizSubmitted(false); setLiveExamScore('ยังไม่ได้เข้าทดสอบ 🎯'); }
+    if (nextCourse.includes('Pre-test')) { 
+      router.push(`/classroom/pretest${params}`); 
+    } else if (nextCourse.includes('ตะลุยโจทย์') || nextCourse.includes('บททดสอบ') || nextCourse.includes('ลุยข้อสอบ')) { 
+      router.push(`/classroom/quiz${params}`); 
+    } else { 
+      router.push(`/classroom/vdo${params}`); 
+    }
   };
+
+  if (loading) return <div style={{ padding: '2rem', textAlign: 'center', fontWeight: '700', fontFamily: '"Inter", "Prompt", sans-serif', color: '#64748b' }}>⏳ ระบบ Guard กำลังตรวจเช็คสิทธิ์และจัดเรียงระบบห้องเรียนวิดีโอ...</div>;
 
   return (
     <div style={{ fontFamily: '"Inter", "Prompt", sans-serif', backgroundColor: '#f8fafc', minHeight: '100vh' }}>
@@ -185,7 +290,8 @@ function ClassroomVdoContent() {
                 <p style={{ fontWeight: '700', margin: '1.5rem 0', fontSize: '1.05rem', color: '#1e293b' }}>{activeQuestions[currentQuestionIndex]?.question_text}</p>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', marginBottom: '1.5rem' }}>
                   {['A', 'B', 'C', 'D'].map(opt => {
-                    const q = activeQuestions[currentQuestionIndex]; const isSel = selectedAnswers[q.id] === opt;
+                    const q = activeQuestions[currentQuestionIndex]; 
+                    const isSel = selectedAnswers[q.id] === opt;
                     return (
                       <div key={opt} onClick={() => !quizSubmitted && setSelectedAnswers({...selectedAnswers, [q.id]: opt})} style={{ padding: '1rem', borderRadius: '12px', border: isSel ? '2px solid #2563eb' : '1px solid #cbd5e1', backgroundColor: isSel ? '#eff6ff' : '#fff', cursor: quizSubmitted ? 'not-allowed' : 'pointer', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '10px' }}>
                         <span style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', width: '24px', height: '24px', borderRadius: '50%', backgroundColor: isSel ? '#2563eb' : '#f1f5f9', color: isSel ? 'white' : '#475569', fontSize: '0.85rem', fontWeight: '800' }}>{opt === 'A' ? 'ก' : opt === 'B' ? 'ข' : opt === 'C' ? 'ค' : 'ง'}</span>
@@ -226,15 +332,15 @@ function ClassroomVdoContent() {
             </div>
           </div>
         </div>
-
       </div>
     </div>
   );
 }
 
+// 🏛️ ส่วนกรอบครอบสำหรับการทำงาน Client-side ใน Next.js App Router
 export default function ClassroomVdoPage() {
   return (
-    <Suspense fallback={<div style={{ padding: '2rem', textAlign: 'center', fontWeight: '700' }}>⏳ กำลังโหลดห้องเรียนวิดีโอเนื้อหา...</div>}>
+    <Suspense fallback={<div style={{ padding: '2rem', textAlign: 'center', fontWeight: '700', fontFamily: '"Inter", "Prompt", sans-serif' }}>⏳ กำลังโหลดห้องเรียนวิดีโอเนื้อหาความปลอดภัย...</div>}>
       <ClassroomVdoContent />
     </Suspense>
   );

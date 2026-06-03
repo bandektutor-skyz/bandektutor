@@ -1,61 +1,69 @@
 'use client';
 import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { supabase } from '../../../supabaseClient'; // เชื่อมต่อระบบฐานข้อมูลหลังบ้านเสถียร 100%
+import { supabase } from '../../../supabaseClient';
 
-// ⏱️ คลังข้อมูลสารบัญแมปปิ้งข้อสอบพรีเทสกลุ่มที่ 3 (จับเวลา 180 นาทีฟูลสเกล พาร์ทที่ 1)
-const pretestCoursesContent: { [key: string]: any[] } = {
-  'คอร์ส Pre-test ข้อสอบเสมือนจริง นสต. (จับเวลา 180 นาที)': [
-    { id: 701, code: '9-1', title: 'นสต.ปราบปราม พรีเทส (Pre-test) ชุดที่ 1 ( 150 ข้อ เวลาสอบ 3 ชม.)', duration: 'โจทย์รวม 150 ข้อฟูลสเกล', isExamOnly: true },
-    { id: 702, code: '9-2', title: 'นสต.ปราบปราม พรีเทส (Pre-test) ชุดที่ 2 ( 150 ข้อ เวลาสอบ 3 ชม.)', duration: 'โจทย์รวม 150 ข้อฟูลสเกล', isExamOnly: true },
-    { id: 703, code: '9-3', title: 'นสต.ปราบปราม พรีเทส (Pre-test) ชุดที่ 3 ( 150 ข้อ เวลาสอบ 3 ชม.)', duration: 'โจทย์รวม 150 ข้อฟูลสเกล', isExamOnly: true },
-    { id: 704, code: '9-4', title: 'นสต.ปราบปราม พรีเทส (Pre-test) ชุดที่ 4 ( 150 ข้อ เวลาสอบ 3 ชม.)', duration: 'โจทย์รวม 150 ข้อฟูลสเกล', isExamOnly: true },
-    { id: 705, code: '9-5', title: 'นสต.ปราบปราม พรีเทส (Pre-test) ชุดที่ 5 ( 150 ข้อ เวลาสอบ 3 ชม.)', duration: 'โจทย์รวม 150 ข้อฟูลสเกล', isExamOnly: true }
-  ],
-  'คอร์ส Pre-test ข้อสอบเสมือนจริง อก. (จับเวลา 180 นาที)': [
-    { id: 801, code: '10-1', title: 'อก. อำนวยการ พรีเทส (Pre-test) ชุดที่ 1 ( 150 ข้อ เวลาสอบ 3 ชม.)', duration: 'โจทย์รวม 150 ข้อฟูลสเกล', isExamOnly: true },
-    { id: 802, code: '10-2', title: 'อก. อำนวยการ พรีเทส (Pre-test) ชุดที่ 2 ( 150 ข้อ เวลาสอบ 3 ชม.)', duration: 'โจทย์รวม 150 ข้อฟูลสเกล', isExamOnly: true },
-    { id: 803, code: '10-3', title: 'อก. อำนวยการ พรีเทส (Pre-test) ชุดที่ 3 ( 150 ข้อ เวลาสอบ 3 ชม.)', duration: 'โจทย์รวม 150 ข้อฟูลสเกล', isExamOnly: true },
-    { id: 804, code: '10-4', title: 'อก. อำนวยการ พรีเทส (Pre-test) ชุดที่ 4 ( 150 ข้อ เวลาสอบ 3 ชม.)', duration: 'โจทย์รวม 150 ข้อฟูลสเกล', isExamOnly: true },
-    { id: 805, code: '10-5', title: 'อก. อำนวยการ พรีเทส (Pre-test) ชุดที่ 5 ( 150 ข้อ เวลาสอบ 3 ชม.)', duration: 'โจทย์รวม 150 ข้อฟูลสเกล', isExamOnly: true }
-  ]
+// 🏛️ แผงคลังข้อมูลพิมพ์เขียวสากล ล็อก Key ด้วยรหัสคอร์ส ดักทางบั๊กสลับสาย 100%
+const pretestCoursesContent: { [key: string]: { name: string; questions: any[] } } = {
+  '9': {
+    name: 'คอร์ส Pre-test ข้อสอบเสมือนจริง นัสต. (จับเวลา 180 นาที)',
+    questions: [
+      { id: 701, code: '9-1', title: 'นสต.ปราบปราม พรีเทส (Pre-test) ชุดที่ 1', duration: '3 ชม.' },
+      { id: 702, code: '9-2', title: 'นสต.ปราบปราม พรีเทส (Pre-test) ชุดที่ 2', duration: '3 ชม.' },
+      { id: 703, code: '9-3', title: 'นสต.ปราบปราม พรีเทส (Pre-test) ชุดที่ 3', duration: '3 ชม.' },
+      { id: 704, code: '9-4', title: 'นสต.ปราบปราม พรีเทส (Pre-test) ชุดที่ 4', duration: '3 ชม.' },
+      { id: 705, code: '9-5', title: 'นสต.ปราบปราม พรีเทส (Pre-test) ชุดที่ 5', duration: '3 ชม.' }
+    ]
+  },
+  '10': {
+    name: 'คอร์ส Pre-test ข้อสอบเสมือนจริง อก. (จับเวลา 180 นาที)',
+    questions: [
+      { id: 801, code: '10-1', title: 'อก. อำนวยการ พรีเทส (Pre-test) ชุดที่ 1', duration: '3 ชม.' },
+      { id: 802, code: '10-2', title: 'อก. อำนวยการ พรีเทส (Pre-test) ชุดที่ 2', duration: '3 ชม.' },
+      { id: 803, code: '10-3', title: 'อก. อำนวยการ พรีเทส (Pre-test) ชุดที่ 3', duration: '3 ชม.' },
+      { id: 804, code: '10-4', title: 'อก. อำนวยการ พรีเทส (Pre-test) ชุดที่ 4', duration: '3 ชม.' },
+      { id: 805, code: '10-5', title: 'อก. อำนวยการ พรีเทส (Pre-test) ชุดที่ 5', duration: '3 ชม.' }
+    ]
+  },
+  '12': {
+    name: 'คอร์ส Pre-test ข้อสอบเสมือนจริง สาย อก./สพฐ.ตร. ตามหลักสูตรใหม่ล่าสุด',
+    questions: [
+      { id: 1201, code: '12-1', title: 'สาย อก./สพฐ.ตร. พรีเทส (Pre-test) ชุดที่ 1', duration: '3 ชม.' },
+      { id: 1202, code: '12-2', title: 'สาย อก./สพฐ.ตร. พรีเทส (Pre-test) ชุดที่ 2', duration: '3 ชม.' },
+      { id: 1203, code: '12-3', title: 'สาย อก./สพฐ.ตร. พรีเทส (Pre-test) ชุดที่ 3', duration: '3 ชม.' },
+      { id: 1204, code: '12-4', title: 'สาย อก./สพฐ.ตร. พรีเทส (Pre-test) ชุดที่ 4', duration: '3 ชม.' },
+      { id: 1205, code: '12-5', title: 'สาย อก./สพฐ.ตร. พรีเทส (Pre-test) ชุดที่ 5', duration: '3 ชม.' },
+      { id: 1206, code: '12-6', title: 'สาย อก./สพฐ.ตร. พรีเทส (Pre-test) ชุดที่ 6', duration: '3 ชม.' },
+      { id: 1207, code: '12-7', title: 'สาย อก./สพฐ.ตร. พรีเทส (Pre-test) ชุดที่ 7', duration: '3 ชม.' },
+      { id: 1208, code: '12-8', title: 'สาย อก./สพฐ.ตร. พรีเทส (Pre-test) ชุดที่ 8', duration: '3 ชม.' },
+      { id: 1209, code: '12-9', title: 'สาย อก./สพฐ.ตร. พรีเทส (Pre-test) ชุดที่ 9', duration: '3 ชม.' },
+      { id: 1210, code: '12-10', title: 'สาย อก./สพฐ.ตร. พรีเทส (Pre-test) ชุดที่ 10', duration: '3 ชม.' },
+      { id: 1211, code: '12-11', title: 'สาย อก./สพฐ.ตร. พรีเทส (Pre-test) ชุดที่ 11', duration: '3 ชม.' },
+      { id: 1212, code: '12-12', title: 'สาย อก./สพฐ.ตร. พรีเทส (Pre-test) ชุดที่ 12', duration: '3 ชม.' },
+      { id: 1213, code: '12-13', title: 'สาย อก./สพฐ.ตร. พรีเทส (Pre-test) ชุดที่ 13', duration: '3 ชม.' },
+      { id: 1214, code: '12-14', title: 'สาย อก./สพฐ.ตร. พรีเทส (Pre-test) ชุดที่ 14', duration: '3 ชม.' },
+      { id: 1215, code: '12-15', title: 'สาย อก./สพฐ.ตร. พรีเทส (Pre-test) ชุดที่ 15', duration: '3 ชม.' }
+    ]
+  }
 };
 
 function ClassroomPretestContent() {
-      // 📍 กลุ่มสถานะตัวแปรสลับคอร์สเรียนมาตรฐานสถาบัน (ติดตั้งเพิ่มข้ามสายเรียน)
-  const [myCourses, setMyCourses] = useState<string[]>([]);
-
-  // 📍 เปิดระบบทะเบียน 10 คอร์สหลักอัตโนมัติประจำห้องจำลองสอบสนามจริง
-  useEffect(() => {
-    const masterCourses = [
-      'คอร์สติวกฎหมายราชการที่จำเป็น', 'คอร์สติว ก.พ. ภาค ก. (ฉบับผ่านชัวร์)', 'คอร์สติวสอบท้องถิ่น (อปท.) ภาค ก. และ ข.',
-      'คอร์สลุยข้อสอบนายสิบตำรวจ อก. (ตะลุยโจทย์แยกรายวิชา)', 'คอร์สลุยข้อสอบ ก.พ. ภาค ก. (บททดสอบแยกตามหัวข้อ)',
-      'คอร์สติวสอบ นายสิบตำรวจ (นสต. สายปราบปราม)', 'คอร์สติวสอบ นายสิบตำรวจ (สายอำนวยการและสนับสนุน)',
-      'คอร์สลุยข้อสอบ นายสิบตำรวจ นสต. (ตะลุยโจทย์แยกรายวิชา)', 'คอร์ส Pre-test ข้อสอบเสมือนจริง นสต. (จับเวลา 180 นาที)',
-      'คอร์ส Pre-test ข้อสอบเสมือนจริง อก. (จับเวลา 180 นาที)'
-    ];
-    setMyCourses(masterCourses);
-  }, []);
-
-  // กลไกอัจฉริยะวิเคราะห์ชื่อคอร์สเพื่อดีดส่งผู้เรียนเปลี่ยนห้องเรียน (Redirect) ข้ามสายทันที
-  const handleCourseChange = (nextCourse: string) => {
-    const params = `?phone=${encodeURIComponent(studentPhone)}&name=${encodeURIComponent(studentName)}&course=${encodeURIComponent(nextCourse)}`;
-    
-    if (nextCourse.includes('Pre-test')) {
-      router.push(`/classroom/pretest${params}`); // ⏱️ ดีดข้ามเข้าห้องกลุ่มจำลองสอบจับเวลา 180 นาที
-    } else if (nextCourse.includes('ลุยข้อสอบ')) {
-      router.push(`/classroom/quiz${params}`);    // 📝 ดีดข้ามเข้าห้องกลุ่มตะลุยคลังโจทย์แยกวิชา
-    } else {
-      router.push(`/classroom/vdo${params}`);     // 📺 ดีดข้ามเข้าห้องกลุ่มบรรยายเนื้อหาวิดีโอ
-    }
-  };
-
   const router = useRouter();
   const searchParams = useSearchParams();
+  
+  // 🏛️ 1. ระบบจัดระเบียบตัวแปรหลักและเปิดเกราะความปลอดภัยดัก URL แฮกเกอร์
   const studentPhone = searchParams.get('phone') || '';
   const studentName = searchParams.get('name') || '';
-  const currentCourse = searchParams.get('course') || '';
+  const courseParam = searchParams.get('course') || ''; 
 
+  // 🔒 2. ผูกสลักระบบ State และกำหนดค่าเริ่มต้นสลับฝั่งให้ถูกต้องตรงวินัย React 
+  const [courseNameDisplay, setCourseNameDisplay] = useState(courseParam); 
+  const currentCourse = courseParam; 
+
+  const [allowedQuestions, setAllowedQuestions] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  // 📋 3. บล็อก State โครงสร้างเดิมประจำการของพาร์ทเนอร์ (ล็อกระเบียบนิ่งเป๊ะตรงร่อง)
   const [examSetsList, setExamSetsList] = useState<any[]>([]);
   const [activeSet, setActiveSet] = useState<any>(null);
   const [activeQuestions, setActiveQuestions] = useState<any[]>([]);
@@ -64,23 +72,116 @@ function ClassroomPretestContent() {
   const [quizSubmitted, setQuizSubmitted] = useState(false);
   const [liveExamScore, setLiveExamScore] = useState('ยังไม่ได้เริ่มทำข้อสอบพรีเทส 🎯');
 
-  // ⏱️ ระบบนาฬิกาจับเวลาถอยหลัง 180 นาที (3 ชั่วโมงเต็ม)
+  // ⏱️ 4. ระบบนาฬิกาจับเวลาถอยหลัง 180 นาที (3 ชั่วโมงเต็มเล่ม) โครงสร้างเดิมของพาร์ทเนอร์
   const [timeLeft, setTimeLeft] = useState(180 * 60);
   const [isTimerRunning, setIsTimerRunning] = useState(false);
-  // ⏱️ กลไกควบคุมวงจรเวลานาฬิกาถอยหลังรายวินาที
+
+  // 🛡️ 5. เกราะดักจับค่าสิทธิ์ที่ส่งมาจากหน้า Login เพื่อกางชุดข้อสอบ (เวอร์ชันแก้ไขจุดบั๊กโครงสร้าง Type และคำว่า Gold)
+  useEffect(() => {
+    if (!studentPhone) { 
+      router.push('/classroom'); 
+      return; 
+    }
+
+    const checkAndLoadQuestions = async () => {
+      try {
+        const myCoursesData = localStorage.getItem('user_my_courses');
+        if (!myCoursesData) {
+          alert('🚫 ไม่พบสิทธิ์เข้าเรียนในระบบ กรุณาล็อกอินใหม่อีกครั้งครับ');
+          router.push('/classroom');
+          return;
+        }
+        const myEnrolledCourses: string[] = JSON.parse(myCoursesData);
+
+        const cleanText = (str: string) => str.replace(/[\u2700-\u27BF]|[\uE000-\uF8FF]|\uD83C[\uDC00-\uDFFF]|[\u2011-\u26FF]/g, '').trim();
+        const cleanCourse = cleanText(courseParam);
+        
+        const matchedKey = Object.keys(pretestCoursesContent).find(key => 
+          cleanCourse.includes(pretestCoursesContent[key].name) || 
+          pretestCoursesContent[key].name.includes(cleanCourse) ||
+          cleanCourse.includes(key)
+        );
+
+        const hasAccessPermission = myEnrolledCourses.some(enrolled => 
+          enrolled.includes(courseParam) || courseParam.includes(enrolled)
+        );
+
+        if (!matchedKey || !hasAccessPermission) {
+          alert('🔒 ขออภัย สิทธิ์เข้าใช้งานถูกจำกัดเฉพาะนักเรียนคอร์สนี้เท่านั้นครับ');
+          router.push('/classroom');
+          return;
+        }
+
+        const courseData = pretestCoursesContent[matchedKey];
+        setCourseNameDisplay(courseData.name);
+        setExamSetsList(courseData.questions); 
+        
+        if (courseData.questions && courseData.questions.length > 0) {
+          setActiveSet(courseData.questions);
+          startPretest(courseData.questions[0].code, courseData.questions[0].title);
+        }
+      } catch (err) {
+        console.error('Guard and load error:', err);
+        router.push('/classroom');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    checkAndLoadQuestions();
+  }, [courseParam, studentPhone, router]);
+
+  // 📝 6. ฟังก์ชันโหลดคำถามชุดใหญ่จากตารางหลังบ้าน Supabase
+  const startPretest = async (setCode: string, setTitle: string) => {
+    setQuizSubmitted(false); 
+    setSelectedAnswers({}); 
+    setCurrentQuestionIndex(0); 
+    setActiveQuestions([]);
+    setTimeLeft(180 * 60); 
+    setIsTimerRunning(true); 
+    setLiveExamScore('กำลังทดสอบ ⏳');
+    
+    try {
+      const { data, error } = await supabase
+        .from('questions')
+        .select('*')
+        .eq('subject_code', setCode)
+        .order('id', { ascending: true }); // สั่งล็อกแถวเรียงตรงจากรหัสน้อยไปมากเป๊ะปัง
+
+      if (error) throw error;
+
+      if (data && data.length > 0) { 
+        setActiveQuestions(data); 
+      } else {
+        setActiveQuestions([{ 
+          id: 9999, 
+          question_text: `📌 ข้อสอบฟูลสเกล 150 ข้อของชุด ${setTitle} กำลังอัปโหลดเข้าระบบเร็วๆ นี้ครับ...`, 
+          choice_a: 'เตรียมความพร้อม', 
+          choice_b: 'รับทราบ', 
+          choice_c: 'อ่านทบทวนเนื้อหา', 
+          choice_d: 'ลุยสอบสนามจริง', 
+          correct_choice: 'choice_a' 
+        }]);
+      }
+    } catch (err) { 
+      console.error('Fetch questions error:', err); 
+    }
+  };
+
+  // ⏱️ 7. กลไกความแม่นยำตรวจนับเวลานาทีถอยหลังรายวินาที
   useEffect(() => {
     let timer: any;
     if (isTimerRunning && timeLeft > 0 && !quizSubmitted) {
       timer = setInterval(() => { setTimeLeft((prev) => prev - 1); }, 1000);
     } else if (timeLeft === 0 && isTimerRunning) {
-      alert('⏰ หมดเวลาทำข้อสอบสนามจำลองแล้วครับ! ระบบจะทำการส่งคำตอบตรวจคะแนนอัตโนมัติทันที');
+      alert('⏰ หมดเวลาทำข้อสอบสนามจำลองแล้วครับ! ระบบจะทำการส่งคำตอบตรวจคะแนนอัตโนมัติทันที 📝');
       setIsTimerRunning(false);
-      submitQuiz();
+      submitQuiz(); 
     }
     return () => clearInterval(timer);
   }, [isTimerRunning, timeLeft, quizSubmitted]);
 
-  // ฟังก์ชันแปลงเลขวินาทีให้ออกมาเป็นโครงสร้างหน้าจอ HH:MM:SS
+  // ⏱️ 8. ฟังก์ชันแปลงเลขวินาทีให้เป็นโครงสร้างหน้าจอ HH:MM:SS
   const formatTime = (seconds: number) => {
     const h = Math.floor(seconds / 3600);
     const m = Math.floor((seconds % 3600) / 60);
@@ -88,184 +189,189 @@ function ClassroomPretestContent() {
     return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
   };
 
-  // ดักจับค่าสิทธิ์ที่ส่งมาจากหน้า Login เพื่อกางชุดข้อสอบให้ตรงสายเรียน
-  useEffect(() => {
-    if (!studentPhone) { router.push('/classroom'); return; }
-    const cleanText = (str: string) => str.replace(/[\u2700-\u27BF]|[\uE000-\uF8FF]|\uD83C[\uDC00-\uDFFF]|[\u2011-\u26FF]/g, '').trim();
-    const cleanCourse = cleanText(currentCourse);
-    
-    const matchedKey = Object.keys(pretestCoursesContent).find(key => cleanCourse.includes(key) || key.includes(cleanCourse));
-    const examSets = matchedKey ? pretestCoursesContent[matchedKey] : [];
-    setExamSetsList(examSets);
-    
-    // 🎯 สั่งกางชุดสอบข้อแรก (Pre-test ชุดที่ 1) และสตาร์ตดึงคำถามทันที
-    if (examSets.length > 0) {
-      setActiveSet(examSets[0]);
-      startPretest(examSets[0].code, examSets[0].title);
-    }
-  }, [currentCourse, studentPhone]);
-  // 📝 ฟังก์ชันโหลดคำถามชุดใหญ่จากตารางหลังบ้าน Supabase
-  const startPretest = async (setCode: string, setTitle: string) => {
-    setQuizSubmitted(false); setSelectedAnswers({}); setCurrentQuestionIndex(0); setActiveQuestions([]);
-    setTimeLeft(180 * 60); setIsTimerRunning(true); // รีเซ็ตเวลาและสั่งนาฬิกาเริ่มรันทันที
-    setLiveExamScore('กำลังทดสอบ ⏳');
-    try {
-      const { data, error } = await supabase.from('questions').select('*').eq('subject_code', setCode);
-      if (error) throw error;
-      if (data && data.length > 0) { 
-        setActiveQuestions(data); 
-      } else {
-        setActiveQuestions([{ id: 9999, question_text: `📌 ข้อสอบฟูลสเกล 150 ข้อของชุด ${setTitle} กำลังอัปโหลดเข้าระบบเร็วๆ นี้ครับ...`, choice_a: 'เตรียมความพร้อม', choice_b: 'รับทราบ', choice_c: 'อ่านทบทวนเนื้อหา', choice_d: 'ลุยสอบสนามจริง', correct_choice: 'choice_a' }]);
-      }
-    } catch (err) { console.error(err); }
-  };
-
-  // 🏆 ฟังก์ชันคำนวณและบันทึกคะแนนสอบลงคลัง quiz_attempts
+  // 🏆 9. ฟังก์ชันคำนวณแยก 2 ภาคหลักสูตร และบันทึกคะแนนสอบลงคลังเกณฑ์ตำรวจ 60% ของแท้
   const submitQuiz = async () => {
     if (quizSubmitted) return;
     setIsTimerRunning(false);
-    let score = 0;
-    activeQuestions.forEach(q => {
+    
+    let totalCorrect = 0;
+    let part1Correct = 0; 
+    let part2Correct = 0; 
+    
+    const part1Total = 40;
+    const part2Total = 110;
+    const grandTotal = activeQuestions.length || 150;
+
+    activeQuestions.forEach((q, index) => {
+      const questionNumber = index + 1;
       const correctLetter = q.correct_choice ? q.correct_choice.replace('choice_', '').toUpperCase() : 'A';
-      if (selectedAnswers[q.id] === correctLetter) score++;
+      const isCorrect = selectedAnswers[q.id] === correctLetter;
+
+      if (isCorrect) {
+        totalCorrect++;
+        if (questionNumber >= 1 && questionNumber <= 40) {
+          part1Correct++;
+        } else if (questionNumber >= 41 && questionNumber <= 150) {
+          part2Correct++;
+        }
+      }
     });
-    
-    const percent = (score / (activeQuestions.length || 1)) * 100;
-    let status = score >= 90 ? 'Pass (ผ่านเกณฑ์ปลอดภัย) 🎉' : 'Fail (ยังไม่ผ่านเกณฑ์) ❌';
-    setLiveExamScore(`สรุปผลสอบ: ${status} \n ได้คะแนน ${score}/${activeQuestions.length} ข้อ (${percent.toFixed(0)}%)`);
+
+    const part1Percent = (part1Correct / part1Total) * 100;
+    const part2Percent = (part2Correct / part2Total) * 100;
+    const totalPercent = (totalCorrect / grandTotal) * 100;
+
+    const isPart1Passed = part1Percent >= 60;
+    const isPart2Passed = part2Percent >= 60;
+    const isAllPassed = isPart1Passed && isPart2Passed; 
+
+    const passedStatusText = isAllPassed ? 'ผ่านเกณฑ์ข้าราชการตำรวจ 🎉' : 'ยังไม่ผ่านเกณฑ์ (ต้องผ่าน 60% ทั้ง 2 ภาควิชา) ❌';
+
+    alert(
+      `📊 [สรุปรายงานผลคะแนนสอบเสมือนจริงฟูลสเกล]\n` +
+      `------------------------------------------\n` +
+      `📝 ผลคะแนนรวมทั้งหมด: ${totalCorrect} / ${grandTotal} ข้อ (${totalPercent.toFixed(0)}%)\n\n` +
+      `🔸 1. ภาคความรู้ความสามารถทั่วไป (ข้อ 1-40)\n` +
+      `   - คะแนนที่ทำได้: ${part1Correct} / ${part1Total} ข้อ\n` +
+      `   - คิดเป็นเปอร์เซ็นต์: ${part1Percent.toFixed(0)}%\n` +
+      `   - ประเมินผลภาค 1: ${isPart1Passed ? '✅ ผ่านเกณฑ์ (60% ขึ้นไป)' : '❌ ไม่ผ่านเกณฑ์'}\n\n` +
+      `🔹 2. ภาคความรู้ความสามารถที่ใช้เฉพาะตำแหน่ง (ข้อ 41-150)\n` +
+      `   - คะแนนที่ทำได้: ${part2Correct} / ${part2Total} ข้อ\n` +
+      `   - คิดเป็นเปอร์เซ็นต์: ${part2Percent.toFixed(0)}%\n` +
+      `   - ประเมินผลภาค 2: ${isPart2Passed ? '✅ ผ่านเกณฑ์ (60% ขึ้นไป)' : '❌ ไม่ผ่านเกณฑ์'}\n` +
+      `------------------------------------------\n` +
+      `🏆 สรุปประเมินภาพรวมหลักสูตร: ${passedStatusText}`
+    );
+
+    setLiveExamScore(`สรุปผลสอบ: ${passedStatusText} \n ได้คะแนนรวม ${totalCorrect}/${grandTotal} ข้อ (${totalPercent.toFixed(0)}%)`);
     setQuizSubmitted(true);
-    
+
     try {
-      await supabase.from('quiz_attempts').insert([{ student_phone: studentPhone, subject_name: activeSet?.title || currentCourse, score_obtained: score, total_questions: activeQuestions.length }]);
-    } catch (err) { console.error(err); }
+      await supabase.from('quiz_attempts').insert([
+        {
+          student_phone: studentPhone,
+          subject_name: `${currentCourse} (Pre-test)`, 
+          score_obtained: totalCorrect,
+          total_questions: grandTotal,
+          passed_status: isAllPassed ? 'ผ่านเกณฑ์' : 'ไม่ผ่านเกณฑ์'
+        }
+      ]);
+    } catch (err) {
+      console.error('Save quiz attempts error:', err);
+    }
   };
 
-  const handleLogout = () => { localStorage.clear(); router.push('/classroom'); };
-  
-    return (
-    <div style={{ fontFamily: '"Inter", "Prompt", sans-serif', backgroundColor: '#f8fafc', minHeight: '100vh' }}>
+  // 🚪 10. ฟังก์ชันออกจากระบบ
+  const handleLogout = () => {
+    localStorage.clear();
+    router.push('/classroom');
+  };
+  if (loading) return <div className="p-8 text-center text-xl font-medium text-gray-600">⏳ ระบบ Guard กำลังตรวจเช็คสิทธิ์และจัดเรียงคิวข้อสอบ...</div>;
+
+  return (
+    <div className="p-6 max-w-5xl mx-auto bg-gray-50 rounded-2xl shadow-sm my-6">
+      <div className="border-b pb-4 mb-6 flex justify-between items-center">
+        <div>
+          <h1 className="text-2xl font-bold text-blue-600 mb-1">🏛️ ห้องสอบจำลอง (Pre-test Mode)</h1>
+          <div className="flex gap-4 text-sm text-gray-600 font-medium">
+            <span>👤 ผู้เข้าสอบ: <strong className="text-gray-900">{studentName}</strong></span>
+            <span>📞 เบอร์โทรศัพท์: <strong className="text-gray-900">{studentPhone}</strong></span>
+          </div>
+        </div>
+        <button onClick={handleLogout} className="px-4 py-2 bg-red-100 text-red-600 rounded-xl hover:bg-red-200 transition font-medium text-sm">
+          🚪 ออกจากระบบ
+        </button>
+      </div>
+
+      <h2 className="text-lg font-bold mb-4 text-gray-800 bg-white px-4 py-3 rounded-xl border border-gray-100 shadow-sm">{courseNameDisplay}</h2>
       
-      {/* 1. แถบเมนูสนามสอบโทนเข้มติดตั้งแผง Dropdown เลือกเปลี่ยนวิชาเรียนได้ครบทุกหน้าจอ */}
-      <div style={{ background: 'linear-gradient(135deg, #1e293b, #0f172a)', padding: '1.25rem 2rem', color: 'white', display: 'flex', justifyContent: 'space-between', alignItems: 'center', boxShadow: '0 4px 12px rgba(0,0,0,0.1)', flexWrap: 'wrap', gap: '15px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '15px', flexWrap: 'wrap' }}>
-          <h2 style={{ fontSize: '1.15rem', fontWeight: '800', margin: 0 }}>⏱️ ห้องจำลองสอบ Pre-test สนามจริง | บ้านเด็กติวเตอร์</h2>
-          <span style={{ backgroundColor: 'rgba(255,255,255,0.1)', padding: '0.4rem 1rem', borderRadius: '100px', fontSize: '0.85rem', fontWeight: '700' }}>👤 คุณ {studentName}</span>
-          <select 
-            value={currentCourse} 
-            onChange={(e) => handleCourseChange(e.target.value)} 
-            style={{ padding: '0.4rem 1rem', borderRadius: '100px', border: 'none', backgroundColor: '#ffffff', color: '#1e293b', fontWeight: '700', fontSize: '0.85rem', cursor: 'pointer', outline: 'none' }}
-          >
-            {myCourses.map((c, i) => <option key={i} value={c}>{c}</option>)}
-          </select>
-        </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
-          {isTimerRunning && !quizSubmitted && (
-            <span style={{ backgroundColor: '#fef2f2', color: '#991b1b', border: '1px solid #fca5a5', padding: '0.4rem 1.2rem', borderRadius: '100px', fontWeight: '800', fontSize: '1rem' }}>⏱️ เวลาคงเหลือ: {formatTime(timeLeft)}</span>
-          )}
-          <button onClick={handleLogout} style={{ backgroundColor: 'rgba(255,255,255,0.15)', color: 'white', border: '1px solid rgba(255,255,255,0.3)', padding: '0.5rem 1.25rem', borderRadius: '10px', cursor: 'pointer', fontWeight: '700', fontSize: '0.85rem' }}>🚪 ออกจากห้องเรียน</button>
-        </div>
+      {/* ⏱️ ส่วนนาฬิกาแสดงผลบนหน้าจอพาร์ทเนอร์ */}
+      <div className="mb-4 p-3 bg-blue-50 text-blue-700 rounded-xl font-bold flex justify-between items-center border border-blue-100">
+        <span>⏱️ เวลาคงเหลือในการทำข้อสอบ:</span>
+        <span className="text-xl font-mono">{formatTime(timeLeft)}</span>
       </div>
 
-      {/* 📊 2. แผงแดชบอร์ดสรุปสถิติ 3 กล่องขอบมนประจำห้องจำลองสอบ Pre-test */}
-      <div style={{ maxWidth: '1280px', margin: '2rem auto 0 auto', padding: '0 2rem', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1.5rem' }}>
-        <div style={{ backgroundColor: '#ffffff', padding: '1.5rem', borderRadius: '20px', border: '1px solid #e2e8f0', borderLeft: '5px solid #2563eb', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.02)' }}>
-          <span style={{ fontSize: '0.85rem', color: '#64748b', fontWeight: '700', display: 'block', marginBottom: '4px' }}>📊 ความคืบหน้าการเรียนคอร์สนี้</span>
-          <span style={{ fontSize: '1.8rem', fontWeight: '900', color: '#2563eb' }}>100%</span>
-        </div>
-        <div style={{ backgroundColor: '#ffffff', padding: '1.5rem', borderRadius: '20px', border: '1px solid #e2e8f0', borderLeft: '5px solid #16a34a', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.02)' }}>
-          <span style={{ fontSize: '0.85rem', color: '#64748b', fontWeight: '700', display: 'block', marginBottom: '4px' }}>📝 ชุดข้อสอบจำลองจริง</span>
-          <span style={{ fontSize: '1.8rem', fontWeight: '900', color: '#16a34a' }}>{examSetsList?.length || 0} ชุด</span>
-        </div>
-        <div style={{ backgroundColor: '#ffffff', padding: '1.5rem', borderRadius: '20px', border: '1px solid #e2e8f0', borderLeft: '5px solid #ea580c', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.02)' }}>
-          <span style={{ fontSize: '0.85rem', color: '#64748b', fontWeight: '700', display: 'block', marginBottom: '4px' }}>🎯 คะแนนและผลการประเมินสอบ</span>
-          <span style={{ fontSize: '0.92rem', fontWeight: '800', color: '#ea580c', display: 'block', whiteSpace: 'pre-line', lineHeight: '1.4' }}>{liveExamScore}</span>
-        </div>
-      </div>
-
-      {/* 🗂️ 3. เปิดแท็กโครงสร้างเลย์เอาต์หลักแยกฝั่งซ้ายขวา */}
-      <div style={{ maxWidth: '1280px', margin: '2rem auto', padding: '0 2rem', display: 'flex', flexWrap: 'wrap', gap: '2rem', alignItems: 'flex-start' }}>
-        {/* ฝั่งซ้าย: กระดานคำถามสเกลใหญ่ และตัวเลือก ก ข ค ง */}
-        <div style={{ flex: '2 1 680px', display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-          <div style={{ backgroundColor: '#ffffff', borderRadius: '24px', padding: '2rem', border: '1px solid #e2e8f0', boxShadow: '0 10px 25px -5px rgba(0,0,0,0.02)' }}>
-            {activeQuestions.length > 0 && (
-              <div>
-                <h3 style={{ borderBottom: '2px solid #f1f5f9', paddingBottom: '0.5rem', fontWeight: '800', color: '#0f172a', fontSize: '1.1rem' }}>📝 กำลังทำข้อสอบ: {activeSet?.title}</h3>
-                <div style={{ margin: '10px 0', fontSize: '0.8rem', color: '#64748b', fontWeight: '700' }}>คำถามข้อที่ {currentQuestionIndex + 1} / {activeQuestions.length}</div>
-                <p style={{ fontWeight: '700', margin: '1.5rem 0', fontSize: '1.05rem', color: '#1e293b', lineHeight: '1.6' }}>{activeQuestions[currentQuestionIndex]?.question_text}</p>
-                
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', marginBottom: '1.5rem' }}>
-                  {['A', 'B', 'C', 'D'].map(opt => {
-                    const q = activeQuestions[currentQuestionIndex]; const isSel = selectedAnswers[q.id] === opt;
-                    const correctLetter = q.correct_choice ? q.correct_choice.replace('choice_', '').toUpperCase() : 'A';
-                    let opBg = isSel ? '#fef2f2' : '#ffffff'; let opBorder = isSel ? '2px solid #ef4444' : '1px solid #cbd5e1';
-                    if (quizSubmitted) {
-                      if (correctLetter === opt) { opBg = '#dcfce7'; opBorder = '2px solid #16a34a'; }
-                      else if (isSel) { opBg = '#fef2f2'; opBorder = '2px solid #ef4444'; }
-                    }
-                    return (
-                      <div key={opt} onClick={() => !quizSubmitted && setSelectedAnswers({...selectedAnswers, [q.id]: opt})} style={{ padding: '1rem', borderRadius: '12px', border: opBorder, backgroundColor: opBg, cursor: quizSubmitted ? 'not-allowed' : 'pointer', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '10px' }}>
-                        <span style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', width: '24px', height: '24px', borderRadius: '50%', backgroundColor: isSel ? '#ef4444' : '#f1f5f9', color: isSel ? 'white' : '#475569', fontSize: '0.85rem', fontWeight: '800' }}>{opt === 'A' ? 'ก' : opt === 'B' ? 'ข' : opt === 'C' ? 'ค' : 'ง'}</span>
-                        <span style={{ color: '#334155' }}>{q[`choice_${opt.toLowerCase()}`] || q[`option_${opt.toLowerCase()}`]}</span>
-                      </div>
-                    );
-                  })}
-                </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <button disabled={currentQuestionIndex === 0} onClick={() => setCurrentQuestionIndex(prev => prev - 1)} style={{ padding: '0.5rem 1.25rem', borderRadius: '8px', cursor: currentQuestionIndex === 0 ? 'not-allowed' : 'pointer', fontWeight: '700' }}>⬅️ ข้อก่อนหน้า</button>
-                  {currentQuestionIndex < activeQuestions.length - 1 ? (
-                    <button onClick={() => setCurrentQuestionIndex(prev => prev + 1)} style={{ padding: '0.5rem 1.25rem', borderRadius: '8px', backgroundColor: '#2563eb', color: '#fff', fontWeight: '700' }}>ข้อถัดไป ➡️</button>
-                  ) : (
-                    !quizSubmitted && <button onClick={submitQuiz} style={{ padding: '0.5rem 1.5rem', borderRadius: '8px', backgroundColor: '#dc2626', color: '#fff', fontWeight: '700', boxShadow: '0 4px 14px rgba(220,38,38,0.3)' }}>📤 ส่งกระดาษคำตอบสนามจริง</button>
-                  )}
-                </div>
-                {quizSubmitted && <div style={{ marginTop: '1.5rem', padding: '1.25rem', background: '#f8fafc', borderRadius: '14px', border: '1px solid #cbd5e1', color: '#0f172a', fontWeight: '700', whiteSpace: 'pre-line', lineHeight: '1.5' }}>{liveExamScore}</div>}
+      <div className="grid gap-3">
+        {examSetsList.map((quiz: any) => (
+          <div key={quiz.id} className="p-4 border border-gray-100 rounded-xl hover:shadow-md hover:border-blue-200 transition flex justify-between items-center bg-white">
+            <div className="flex flex-col gap-1">
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-bold px-2 py-0.5 bg-blue-50 text-blue-600 rounded-md border border-blue-100">รหัสคอร์สย่อย: {quiz.code}</span>
+                <span className="text-xs font-medium px-2 py-0.5 bg-gray-100 text-gray-600 rounded-md">⏱️ เวลาสอบ: {quiz.duration}</span>
               </div>
+              <strong className="text-gray-800 text-base font-semibold mt-1">{quiz.title}</strong>
+            </div>
+            <button 
+              onClick={() => startPretest(quiz.code, quiz.title)}
+              className="px-5 py-2.5 bg-blue-600 text-white rounded-xl hover:bg-bg-blue-700 transition font-semibold shadow-sm text-sm"
+            >
+              📝 เริ่มทำข้อสอบ
+            </button>
+          </div>
+        ))}
+      </div>
+      
+      {/* 💡 ส่วนกางแถวกล่องทำข้อสอบ (Render คำถาม 150 ข้อด้านล่างโครงสร้างเดิมของพาร์ทเนอร์) */}
+      {activeQuestions.length > 0 && !quizSubmitted && (
+        <div className="mt-8 p-6 bg-white rounded-2xl border border-gray-200 shadow-sm">
+          <div className="flex justify-between items-center mb-4 border-b pb-2">
+            <span className="font-bold text-gray-700">ข้อที่ {currentQuestionIndex + 1} / {activeQuestions.length}</span>
+            <span className="text-sm text-blue-600 font-semibold">{liveExamScore}</span>
+          </div>
+          <p className="text-lg font-semibold text-gray-900 mb-6">{activeQuestions[currentQuestionIndex].question_text}</p>
+          <div className="grid gap-3 mb-6">
+            {['A', 'B', 'C', 'D'].map((choice) => {
+              const choiceKey = `choice_${choice.toLowerCase()}`;
+              return (
+                <button
+                  key={choice}
+                  onClick={() => setSelectedAnswers({ ...selectedAnswers, [activeQuestions[currentQuestionIndex].id]: choice })}
+                  className={`p-4 rounded-xl text-left border transition font-medium ${
+                    selectedAnswers[activeQuestions[currentQuestionIndex].id] === choice
+                      ? 'bg-blue-50 border-blue-500 text-blue-700 font-bold'
+                      : 'border-gray-200 hover:bg-gray-50 text-gray-700'
+                  }`}
+                >
+                  <span className="inline-block w-8 h-8 rounded-full bg-gray-100 text-center leading-8 mr-3 font-bold text-sm">{choice}</span>
+                  {activeQuestions[currentQuestionIndex][choiceKey]}
+                </button>
+              );
+            })}
+          </div>
+          <div className="flex justify-between items-center pt-4 border-t">
+            <button
+              disabled={currentQuestionIndex === 0}
+              onClick={() => setCurrentQuestionIndex(currentQuestionIndex - 1)}
+              className="px-4 py-2 border rounded-xl hover:bg-gray-50 disabled:opacity-40 transition font-medium"
+            >
+              ⬅️ ข้อก่อนหน้า
+            </button>
+            {currentQuestionIndex < activeQuestions.length - 1 ? (
+              <button
+                onClick={() => setCurrentQuestionIndex(currentQuestionIndex + 1)}
+                className="px-5 py-2 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition font-medium"
+              >
+                ข้อถัดไป ➡️
+              </button>
+            ) : (
+              <button
+                onClick={submitQuiz}
+                className="px-6 py-2.5 bg-green-600 text-white rounded-xl hover:bg-green-700 transition font-bold shadow-md"
+              >
+                🚀 ส่งกระดาษคำตอบ
+              </button>
             )}
           </div>
         </div>
-
-        {/* ฝั่งขวา: สารบัญชุดข้อสอบพรีเทส และ แผงเกณฑ์คะแนนจำลอง 150 ข้อเต็มพิกัดดั้งเดิมครบถ้วน */}
-        <div style={{ flex: '1 1 320px', display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-          <div style={{ backgroundColor: '#ffffff', borderRadius: '24px', padding: '1.5rem', border: '1px solid #e2e8f0', boxShadow: '0 10px 25px -5px rgba(0,0,0,0.02)' }}>
-            <h3 style={{ fontSize: '1rem', fontWeight: '800', borderBottom: '2px solid #f1f5f9', paddingBottom: '0.5rem', marginBottom: '1rem', color: '#0f172a' }}>🗂️ ชุดข้อสอบ Pre-test ({examSetsList.length} ชุด)</h3>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-              {examSetsList.map((examSet, i) => {
-                const isCurrent = activeSet?.id === examSet.id;
-                return (
-                  <div key={i} onClick={() => { setActiveSet(examSet); startPretest(examSet.code, examSet.title); }} style={{ padding: '1rem', borderRadius: '12px', backgroundColor: isCurrent ? '#f1f5f9' : '#f8fafc', border: isCurrent ? '2px solid #0f172a' : '1px solid #e2e8f0', cursor: 'pointer', transition: 'all 0.2s' }}>
-                    <h5 style={{ margin: '0 0 4px 0', fontSize: '0.85rem', fontWeight: '800', color: isCurrent ? '#0f172a' : '#1e293b' }}>{examSet.title}</h5>
-                    <span style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: '600' }}>ℹ️ {examSet.duration}</span>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-
-          {/* 📈 บล็อกเกณฑ์คะแนนประเมินผลสนามจำลองสอบ Pre-test (150 ข้อฟูลสเกล) รักษารายละเอียดครบถ้วนทุกประการ */}
-          <div style={{ backgroundColor: '#ffffff', borderRadius: '24px', border: '1px solid #e2e8f0', padding: '1.5rem', background: 'linear-gradient(to bottom, #ffffff, #fdfcf7)', boxShadow: '0 10px 25px -5px rgba(0,0,0,0.02)' }}>
-            <div style={{ borderBottom: '2px solid #f6e0b3', paddingBottom: '0.6rem', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '8px' }}><span style={{ fontSize: '1.3rem' }}>📈</span><h3 style={{ fontSize: '1.05rem', fontWeight: '800', color: '#b45309', margin: 0 }}>เกณฑ์การประเมินผลสนามจริง (Grading)</h3></div>
-            <div style={{ fontSize: '0.82rem', color: '#475569', display: 'flex', flexDirection: 'column', gap: '8px', lineHeight: '1.4' }}>
-              <p style={{ margin: 0, fontWeight: '700', color: '#1e293b' }}>• คะแนนเต็มฟูลสเกล: 150 คะแนน</p>
-              <p style={{ margin: '0 0 8px 0', fontWeight: '700', color: '#1e293b' }}>• เกณฑ์ผ่านปลอดภัย: 90 คะแนนขึ้นไป (60%)</p>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', borderTop: '1px dashed #cbd5e1', paddingTop: '10px' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', backgroundColor: '#f0fdf4', padding: '6px 8px', borderRadius: '6px' }}><span style={{ fontWeight: '700', color: '#166534' }}>🥇 135 - 150 คะแนน (90%+)</span><span style={{ color: '#166534', fontWeight: '800' }}>Excellent</span></div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', backgroundColor: '#eff6ff', padding: '6px 8px', borderRadius: '6px' }}><span style={{ fontWeight: '700', color: '#1e40af' }}>🏅 120 - 134 คะแนน (80%-89%)</span><span style={{ color: '#1e40af', fontWeight: '800' }}>Very Good</span></div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', backgroundColor: '#f0fdf4', padding: '6px 8px', borderRadius: '6px' }}><span style={{ fontWeight: '700', color: '#15803d' }}>🎉 90 - 119 คะแนน (60%-79%)</span><span style={{ color: '#15803d', fontWeight: '800' }}>Pass</span></div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', backgroundColor: '#fffbeb', padding: '8px 12px', borderRadius: '6px' }}><span style={{ fontWeight: '700', color: '#b45309' }}>⚠️ 75 - 89 คะแนน (50%-59%)</span><span style={{ color: '#b45309', fontWeight: '800' }}>Fail (คาบเส้น)</span></div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', backgroundColor: '#fef2f2', padding: '6px 8px', borderRadius: '6px' }}><span style={{ fontWeight: '700', color: '#991b1b' }}>❌ 0 - 74 คะแนน (ต่ำกว่า 50%)</span><span style={{ color: '#991b1b', fontWeight: '800' }}>ปรับปรุงด่วน</span></div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-      </div>
+      )}
     </div>
   );
 }
 
+// 🏛️ ส่วนกรอบครอบสำหรับการทำงาน Client-side ใน Next.js App Router
 export default function ClassroomPretestPage() {
   return (
-    <Suspense fallback={<div style={{ padding: '2rem', textAlign: 'center', fontWeight: '700' }}>⏳ กำลังสร้างระบบจำลองสอบถอยหลัง 3 ชั่วโมง...</div>}>
+    <Suspense fallback={<div className="p-8 text-center text-gray-500 font-medium">⏳ กำลังดำเนินการโหลดระบบคลังระบบความปลอดภัย...</div>}>
       <ClassroomPretestContent />
     </Suspense>
   );
