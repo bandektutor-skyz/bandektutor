@@ -155,41 +155,20 @@ function ClassroomPretestContent() {
     checkAndLoadQuestions();
   }, [courseParam, studentPhone, myCourses, router]);
 
-  // 📝 6. ฟังก์ชันโหลดคำถามชุดใหญ่เรียงแถวตรงตามเลข ID หลังบ้านที่พาร์ทเนอร์ตรวจสอบแล้วว่าถูกต้อง 100%
+    // 📝 6. ฟังก์ชันโหลดคำถามชุดใหญ่จากตารางหลังบ้าน Supabase (ถอยกลับไปใช้กลไกธรรมชาติดั้งเดิมที่พาร์ทเนอร์ตรวจสอบแล้วตรงล็อก 100%)
   const startPretest = async (setCode: string, setTitle: string) => {
-    setQuizSubmitted(false);
-    setSelectedAnswers({});
-    setCurrentQuestionIndex(0);
-    setActiveQuestions([]);
-    setTimeLeft(180 * 60);
-    setIsTimerRunning(true);
+    setQuizSubmitted(false); setSelectedAnswers({}); setCurrentQuestionIndex(0); setActiveQuestions([]);
+    setTimeLeft(180 * 60); setIsTimerRunning(true); // รีเซ็ตเวลาและสั่งนาฬิกาเริ่มรันทันที
     setLiveExamScore('กำลังทดสอบ ⏳');
-
     try {
-      const { data, error } = await supabase
-        .from('questions')
-        .select('*')
-        .eq('subject_code', setCode)
-        .order('id', { ascending: true }); // ดึงตามไอดีเรียงจากน้อยไปมาก ตรงล็อกฐานข้อมูลที่จัดเรียงมาแล้ว 100%
-
+      const { data, error } = await supabase.from('questions').select('*').eq('subject_code', setCode);
       if (error) throw error;
-
       if (data && data.length > 0) {
         setActiveQuestions(data);
       } else {
-        setActiveQuestions([{
-          id: 9999,
-          question_text: `📌 ข้อสอบฟูลสเกล 150 ข้อของชุด ${setTitle} กำลังอัปโหลดเข้าระบบเร็วๆ นี้ครับ...`,
-          choice_a: 'เตรียมความพร้อม',
-          choice_b: 'รับทราบ',
-          choice_c: 'อ่านทบทวนเนื้อหา',
-          choice_d: 'ลุยสอบสนามจริง',
-          correct_choice: 'choice_a'
-        }]);
+        setActiveQuestions([{ id: 9999, question_text: `📌 ข้อสอบฟูลสเกล 150 ข้อของชุด ${setTitle} กำลังอัปโหลดเข้าระบบเร็วๆ นี้ครับ...`, choice_a: 'เตรียมความพร้อม', choice_b: 'รับทราบ', choice_c: 'อ่านทบทวนเนื้อหา', choice_d: 'ลุยสอบสนามจริง', correct_choice: 'choice_a' }]);
       }
-    } catch (err) {
-      console.error('Fetch pretest questions error:', err);
-    }
+    } catch (err) { console.error(err); }
   };
 
   // ⏱️ 7. กลไกควบคุมวงจรเวลานาฬิกาถอยหลังรายวินาที
