@@ -351,26 +351,49 @@ function ClassroomPretestContent() {
 
                 {/* แผงชอยส์ ก ข ค ง วงกลมไฮไลต์ฟ้า พร้อมระบบตรวจคะแนนอัจฉริยะเปลี่ยนสี */}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', marginBottom: '1.5rem' }}>
-                  {['A', 'B', 'C', 'D'].map(opt => {
+                                   {['A', 'B', 'C', 'D'].map(opt => {
                     const q = activeQuestions[currentQuestionIndex];
                     const isSel = selectedAnswers[q.id] === opt;
                     const correctLetter = q.correct_choice ? q.correct_choice.replace('choice_', '').toUpperCase() : 'A';
+                    
                     let opBg = isSel ? '#eff6ff' : '#ffffff';
                     let opBorder = isSel ? '2px solid #2563eb' : '1px solid #cbd5e1';
+                    let opColor = isSel ? '#2563eb' : '#334155';
 
+                    // 🏆 ระบบเฉลยเปลี่ยนร่างอัจฉริยะ (Review Mode) เมื่อกดส่งข้อสอบแล้วจะดีดระบายสีเขียว-แดงทันทีหน้าร้าน!
                     if (quizSubmitted) {
-                      if (correctLetter === opt) { opBg = '#dcfce7'; opBorder = '2px solid #16a34a'; }
-                      else if (isSel) { opBg = '#fef2f2'; opBorder = '2px solid #ef4444'; }
+                      if (correctLetter === opt) {
+                        opBg = '#dcfce7'; // เฉลยข้อที่ถูก ดีดเป็นสีเขียวพรีเมียมถนอมสายตา
+                        opBorder = '2px solid #16a34a';
+                        opColor = '#166534';
+                      } else if (isSel) {
+                        opBg = '#fef2f2'; // ข้อที่นักเรียนกาผิด ดีดเป็นสีแดงคมชัดกริบ
+                        opBorder = '2px solid #ef4444';
+                        opColor = '#991b1b';
+                      }
                     }
 
                     return (
                       <div
                         key={opt}
                         onClick={() => !quizSubmitted && setSelectedAnswers({ ...selectedAnswers, [q.id]: opt })}
-                        style={{ padding: '1rem', borderRadius: '12px', border: opBorder, backgroundColor: opBg, cursor: quizSubmitted ? 'not-allowed' : 'pointer', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '10px', transition: 'all 0.15s' }}
+                        style={{ padding: '1rem', borderRadius: '12px', border: opBorder, backgroundColor: opBg, color: opColor, cursor: quizSubmitted ? 'not-allowed' : 'pointer', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '10px', transition: 'all 0.15s' }}
                       >
-                        <span style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', width: '24px', height: '24px', borderRadius: '50%', backgroundColor: isSel ? '#2563eb' : '#f1f5f9', color: isSel ? 'white' : '#475569', fontSize: '0.85rem', fontWeight: '800' }}>{opt === 'A' ? 'ก' : opt === 'B' ? 'ข' : opt === 'C' ? 'ค' : 'ง'}</span>
-                        <span style={{ color: '#334155' }}>{q[`choice_${opt.toLowerCase()}`] || q[`option_${opt.toLowerCase()}`]}</span>
+                        <span style={{ 
+                          display: 'flex', 
+                          justifyContent: 'center', 
+                          alignItems: 'center', 
+                          width: '24px', 
+                          height: '24px', 
+                          borderRadius: '50%', 
+                          backgroundColor: isSel ? (quizSubmitted && correctLetter !== opt ? '#ef4444' : '#2563eb') : (quizSubmitted && correctLetter === opt ? '#16a34a' : '#f1f5f9'), 
+                          color: isSel || (quizSubmitted && correctLetter === opt) ? 'white' : '#475569', 
+                          fontSize: '0.85rem', 
+                          fontWeight: '800' 
+                        }}>
+                          {opt === 'A' ? 'ก' : opt === 'B' ? 'ข' : opt === 'C' ? 'ค' : 'ง'}
+                        </span>
+                        <span style={{ fontSize: '0.98rem' }}>{q[`choice_${opt.toLowerCase()}`] || q[`option_${opt.toLowerCase()}`]}</span>
                       </div>
                     );
                   })}
@@ -385,11 +408,12 @@ function ClassroomPretestContent() {
                     !quizSubmitted && <button onClick={submitQuiz} style={{ padding: '0.5rem 1.5rem', borderRadius: '8px', backgroundColor: '#10b981', color: '#fff', fontWeight: '700', border: 'none', cursor: 'pointer' }}>📤 ส่งกระดาษคำตอบ</button>
                   )}
                 </div>
-                {quizSubmitted && <div style={{ marginTop: '1.5rem', padding: '1rem', background: '#fffbeb', borderRadius: '12px', color: '#b45309', fontWeight: '700', border: '1px solid #f6e0b3' }}>{liveExamScore}</div>}
+                {quizSubmitted && <div style={{ marginTop: '1.5rem', padding: '1rem', background: '#fffbeb', borderRadius: '12px', color: '#b45309', fontWeight: '700', border: '1px solid #f6e0b3', whiteSpace: 'pre-line', lineHeight: '1.5' }}>{liveExamScore}</div>}
               </div>
             </div>
           )}
         </div>
+
         {/* ฝั่งขวา: รายชื่อชุดข้อสอบย่อย 15 ชุด (ตามรูปภาพชิ้นที่สาม) และ เกณฑ์คะแนนตัดเกรดสีทองนวลตัวเต็ม (ตามรูปภาพชิ้นที่สี่) */}
         <div style={{ flex: '1 1 320px', display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
 
