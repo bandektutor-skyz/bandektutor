@@ -3,10 +3,10 @@ import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { supabase } from '../../../supabaseClient';
 
-// 🏛️ แผงคลังข้อมูลพิมพ์เขียวสากล ล็อก Key ด้วยรหัสคอร์ส ดักทางบั๊กสลับสาย 100%
+// 🏛️ แผงคลังข้อมูลพิมพ์เขียวสากล ล็อก Key และจัดสรรชื่อคอร์สตรงร่องสากลแท้ 100%
 const pretestCoursesContent: { [key: string]: { name: string; questions: any[] } } = {
   '9': {
-    name: 'คอร์ส Pre-test ข้อสอบเสมือนจริง นัสต. (จับเวลา 180 นาที)',
+    name: 'คอร์ส Pre-test ข้อสอบเสมือนจริง นสต. (จับเวลา 180 นาที)',
     questions: [
       { id: 701, code: '9-1', title: 'นสต.ปราบปราม พรีเทส (Pre-test) ชุดที่ 1', duration: '3 ชม.' },
       { id: 702, code: '9-2', title: 'นสต.ปราบปราม พรีเทส (Pre-test) ชุดที่ 2', duration: '3 ชม.' },
@@ -51,19 +51,16 @@ function ClassroomPretestContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   
-  // 🏛️ 1. ระบบจัดระเบียบตัวแปรหลักและเปิดเกราะความปลอดภัยดัก URL แฮกเกอร์
   const studentPhone = searchParams.get('phone') || '';
   const studentName = searchParams.get('name') || '';
   const courseParam = searchParams.get('course') || ''; 
 
-  // 🔒 2. ผูกสลักระบบ State และกำหนดค่าเริ่มต้นสลับฝั่งให้ถูกต้องตรงวินัย React 
   const [courseNameDisplay, setCourseNameDisplay] = useState(courseParam); 
   const currentCourse = courseParam; 
 
   const [allowedQuestions, setAllowedQuestions] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // 📋 3. บล็อก State โครงสร้างเดิมประจำการของพาร์ทเนอร์ (ล็อกระเบียบนิ่งเป๊ะตรงร่อง)
   const [examSetsList, setExamSetsList] = useState<any[]>([]);
   const [activeSet, setActiveSet] = useState<any>(null);
   const [activeQuestions, setActiveQuestions] = useState<any[]>([]);
@@ -72,11 +69,9 @@ function ClassroomPretestContent() {
   const [quizSubmitted, setQuizSubmitted] = useState(false);
   const [liveExamScore, setLiveExamScore] = useState('ยังไม่ได้เริ่มทำข้อสอบพรีเทส 🎯');
 
-  // ⏱️ 4. ระบบนาฬิกาจับเวลาถอยหลัง 180 นาที (3 ชั่วโมงเต็มเล่ม) โครงสร้างเดิมของพาร์ทเนอร์
   const [timeLeft, setTimeLeft] = useState(180 * 60);
   const [isTimerRunning, setIsTimerRunning] = useState(false);
-
-  // 🛡️ 5. เกราะดักจับค่าสิทธิ์ที่ส่งมาจากหน้า Login เพื่อกางชุดข้อสอบ (เวอร์ชันแก้ไขจุดบั๊กโครงสร้าง Type และคำว่า Gold)
+  // 🛡️ 5. เกราะดักจับสิทธิ์เรียนพรีเทสอัจฉริยะ (เวอร์ชันแก้ปัญหาตัวสะกดและสระวรรคเหลื่อมล้ำ 100%)
   useEffect(() => {
     if (!studentPhone) { 
       router.push('/classroom'); 
@@ -87,24 +82,35 @@ function ClassroomPretestContent() {
       try {
         const myCoursesData = localStorage.getItem('user_my_courses');
         if (!myCoursesData) {
-          alert('🚫 ไม่พบสิทธิ์เข้าเรียนในระบบ กรุณาล็อกอินใหม่อีกครั้งครับ');
+          alert('🚫 ไม่พบข้อมูลสิทธิ์เข้าเรียนในระบบ กรุณาล็อกอินใหม่อีกครั้งครับ');
           router.push('/classroom');
           return;
         }
         const myEnrolledCourses: string[] = JSON.parse(myCoursesData);
 
-        const cleanText = (str: string) => str.replace(/[\u2700-\u27BF]|[\uE000-\uF8FF]|\uD83C[\uDC00-\uDFFF]|[\u2011-\u26FF]/g, '').trim();
-        const cleanCourse = cleanText(courseParam);
-        
-        const matchedKey = Object.keys(pretestCoursesContent).find(key => 
-          cleanCourse.includes(pretestCoursesContent[key].name) || 
-          pretestCoursesContent[key].name.includes(cleanCourse) ||
-          cleanCourse.includes(key)
-        );
+        const superClean = (str: string) => {
+          if (!str) return '';
+          return str
+            .replace(/[\u2700-\u27BF]|[\uE000-\uF8FF]|\uD83C[\uDC00-\uDFFF]|[\u2011-\u26FF]|\s+/g, '')
+            .replace(/นัสต/g, 'นสต')
+            .trim();
+        };
 
-        const hasAccessPermission = myEnrolledCourses.some(enrolled => 
-          enrolled.includes(courseParam) || courseParam.includes(enrolled)
-        );
+        const cleanCourseParam = superClean(courseParam);
+
+        const matchedKey = Object.keys(pretestCoursesContent).find(key => {
+          const cleanMasterName = superClean(pretestCoursesContent[key].name);
+          return cleanCourseParam.includes(cleanMasterName) || 
+                 cleanMasterName.includes(cleanCourseParam) || 
+                 cleanCourseParam.includes(key);
+        });
+
+        const hasAccessPermission = myEnrolledCourses.some(enrolled => {
+          const cleanEnrolled = superClean(enrolled);
+          return cleanEnrolled.includes(cleanCourseParam) || 
+                 cleanCourseParam.includes(cleanEnrolled) ||
+                 (cleanCourseParam.includes('Pre-test') && cleanEnrolled.includes('Pre-test'));
+        });
 
         if (!matchedKey || !hasAccessPermission) {
           alert('🔒 ขออภัย สิทธิ์เข้าใช้งานถูกจำกัดเฉพาะนักเรียนคอร์สนี้เท่านั้นครับ');
@@ -114,14 +120,16 @@ function ClassroomPretestContent() {
 
         const courseData = pretestCoursesContent[matchedKey];
         setCourseNameDisplay(courseData.name);
-        setExamSetsList(courseData.questions); 
+        setExamSetsList(courseData.questions);
         
+                // 🎯 สั่งกางชุดข้อสอบพรีเทสชุดแรก (Index 0) และสตาร์ตดึงคำถามทันที (ซ่อมแซมล็อกพิกัด [0] เรียบร้อย)
         if (courseData.questions && courseData.questions.length > 0) {
-          setActiveSet(courseData.questions);
-          startPretest(courseData.questions[0].code, courseData.questions[0].title);
+          setActiveSet(courseData.questions[0]); // ระบุล็อกพิกัดชุดที่ 1 ของอาเรย์ตรงร่อง
+          startPretest(courseData.questions[0].code, courseData.questions[0].title); // ดึงค่า code และ title จาก Index 0 ได้ถูกต้องแม่นยำ
         }
+
       } catch (err) {
-        console.error('Guard and load error:', err);
+        console.error('Pretest Access Guard Error:', err);
         router.push('/classroom');
       } finally {
         setLoading(false);
@@ -131,14 +139,14 @@ function ClassroomPretestContent() {
     checkAndLoadQuestions();
   }, [courseParam, studentPhone, router]);
 
-  // 📝 6. ฟังก์ชันโหลดคำถามชุดใหญ่จากตารางหลังบ้าน Supabase
+  // 📝 6. ฟังก์ชันโหลดคำถามชุดใหญ่เรียงแถวตรงตามเลข ID จากตารางหลังบ้าน Supabase
   const startPretest = async (setCode: string, setTitle: string) => {
     setQuizSubmitted(false); 
     setSelectedAnswers({}); 
     setCurrentQuestionIndex(0); 
     setActiveQuestions([]);
     setTimeLeft(180 * 60); 
-    setIsTimerRunning(true); 
+    setIsTimerRunning(true);
     setLiveExamScore('กำลังทดสอบ ⏳');
     
     try {
@@ -146,7 +154,7 @@ function ClassroomPretestContent() {
         .from('questions')
         .select('*')
         .eq('subject_code', setCode)
-        .order('id', { ascending: true }); // สั่งล็อกแถวเรียงตรงจากรหัสน้อยไปมากเป๊ะปัง
+        .order('id', { ascending: true });
 
       if (error) throw error;
 
@@ -164,11 +172,11 @@ function ClassroomPretestContent() {
         }]);
       }
     } catch (err) { 
-      console.error('Fetch questions error:', err); 
+      console.error('Fetch pretest questions error:', err); 
     }
   };
 
-  // ⏱️ 7. กลไกความแม่นยำตรวจนับเวลานาทีถอยหลังรายวินาที
+  // ⏱️ 7. กลไกควบคุมวงจรเวลานาฬิกาถอยหลังรายวินาที
   useEffect(() => {
     let timer: any;
     if (isTimerRunning && timeLeft > 0 && !quizSubmitted) {
@@ -181,14 +189,13 @@ function ClassroomPretestContent() {
     return () => clearInterval(timer);
   }, [isTimerRunning, timeLeft, quizSubmitted]);
 
-  // ⏱️ 8. ฟังก์ชันแปลงเลขวินาทีให้เป็นโครงสร้างหน้าจอ HH:MM:SS
+  // ⏱️ 8. ฟังก์ชันแปลงเลขวินาทีให้ออกมาเป็นโครงสร้างหน้าจอ HH:MM:SS
   const formatTime = (seconds: number) => {
     const h = Math.floor(seconds / 3600);
     const m = Math.floor((seconds % 3600) / 60);
     const s = seconds % 60;
     return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
   };
-
   // 🏆 9. ฟังก์ชันคำนวณแยก 2 ภาคหลักสูตร และบันทึกคะแนนสอบลงคลังเกณฑ์ตำรวจ 60% ของแท้
   const submitQuiz = async () => {
     if (quizSubmitted) return;
@@ -266,104 +273,168 @@ function ClassroomPretestContent() {
     localStorage.clear();
     router.push('/classroom');
   };
-  if (loading) return <div className="p-8 text-center text-xl font-medium text-gray-600">⏳ ระบบ Guard กำลังตรวจเช็คสิทธิ์และจัดเรียงคิวข้อสอบ...</div>;
+
+  if (loading) return <div style={{ padding: '2rem', textAlign: 'center', fontWeight: '700', fontFamily: '"Inter", "Prompt", sans-serif', color: '#64748b' }}>⏳ ระบบ Guard กำลังตรวจเช็คสิทธิ์และจัดเรียงคิวข้อสอบพรีเทส...</div>;
 
   return (
-    <div className="p-6 max-w-5xl mx-auto bg-gray-50 rounded-2xl shadow-sm my-6">
-      <div className="border-b pb-4 mb-6 flex justify-between items-center">
+    <div style={{ fontFamily: '"Inter", "Prompt", sans-serif', backgroundColor: '#f8fafc', minHeight: '100vh', paddingBottom: '3rem' }}>
+      
+      {/* 1. แถบเมนูบาร์ด้านบนสุดหรูหราแบบฉบับสถาบัน */}
+      <div style={{ background: 'linear-gradient(135deg, #0052cc, #00a4ff)', padding: '1.25rem 2rem', color: 'white', display: 'flex', justifyContent: 'space-between', alignItems: 'center', boxShadow: '0 4px 12px rgba(0,0,0,0.1)', flexWrap: 'wrap', gap: '15px' }}>
         <div>
-          <h1 className="text-2xl font-bold text-blue-600 mb-1">🏛️ ห้องสอบจำลอง (Pre-test Mode)</h1>
-          <div className="flex gap-4 text-sm text-gray-600 font-medium">
-            <span>👤 ผู้เข้าสอบ: <strong className="text-gray-900">{studentName}</strong></span>
-            <span>📞 เบอร์โทรศัพท์: <strong className="text-gray-900">{studentPhone}</strong></span>
+          <h1 style={{ fontSize: '1.4rem', fontWeight: '800', margin: '0 0 4px 0' }}>🏛️ ห้องสอบจำลองเสมือนจริง (Pre-test Mode)</h1>
+          <div style={{ display: 'flex', gap: '15px', fontSize: '0.88rem', opacity: 0.9, fontWeight: '600' }}>
+            <span>👤 ผู้เข้าสอบ: {studentName}</span>
+            <span>📞 เบอร์โทรศัพท์: {studentPhone}</span>
           </div>
         </div>
-        <button onClick={handleLogout} className="px-4 py-2 bg-red-100 text-red-600 rounded-xl hover:bg-red-200 transition font-medium text-sm">
-          🚪 ออกจากระบบ
-        </button>
+        <button onClick={handleLogout} style={{ backgroundColor: 'rgba(255,255,255,0.2)', color: 'white', border: '1px solid rgba(255,255,255,0.3)', padding: '0.5rem 1.25rem', borderRadius: '10px', cursor: 'pointer', fontWeight: '700', fontSize: '0.85rem', transition: 'all 0.2s' }}>🚪 ออกจากระบบ</button>
       </div>
 
-      <h2 className="text-lg font-bold mb-4 text-gray-800 bg-white px-4 py-3 rounded-xl border border-gray-100 shadow-sm">{courseNameDisplay}</h2>
-      
-      {/* ⏱️ ส่วนนาฬิกาแสดงผลบนหน้าจอพาร์ทเนอร์ */}
-      <div className="mb-4 p-3 bg-blue-50 text-blue-700 rounded-xl font-bold flex justify-between items-center border border-blue-100">
-        <span>⏱️ เวลาคงเหลือในการทำข้อสอบ:</span>
-        <span className="text-xl font-mono">{formatTime(timeLeft)}</span>
-      </div>
+      <div style={{ maxWidth: '1024px', margin: '2rem auto', padding: '0 1.5rem' }}>
+        <h2 style={{ fontSize: '1.15rem', fontWeight: '800', marginBottom: '1.5rem', color: '#1e293b', backgroundColor: '#ffffff', padding: '1rem 1.25rem', borderRadius: '16px', border: '1px solid #e2e8f0', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.02)' }}>{courseNameDisplay}</h2>
+        
+        {/* ⏱️ ส่วนนาฬิกาจับเวลาถอยหลังดีไซน์เด่นชัดเจน */}
+        <div style={{ marginBottom: '1.5rem', padding: '1rem 1.25rem', backgroundColor: '#eff6ff', border: '1px solid #bfdbfe', color: '#1e40af', borderRadius: '16px', fontWeight: '700', display: 'flex', justifyContent: 'space-between', alignItems: 'center', boxShadow: '0 2px 4px rgba(0,0,0,0.01)' }}>
+          <span style={{ fontSize: '0.95rem' }}>⏱️ เวลาคงเหลือในการทำข้อสอบสนามจำลอง:</span>
+          <span style={{ fontSize: '1.5rem', fontFamily: 'monospace', fontWeight: '800' }}>{formatTime(timeLeft)}</span>
+        </div>
 
-      <div className="grid gap-3">
-        {examSetsList.map((quiz: any) => (
-          <div key={quiz.id} className="p-4 border border-gray-100 rounded-xl hover:shadow-md hover:border-blue-200 transition flex justify-between items-center bg-white">
-            <div className="flex flex-col gap-1">
-              <div className="flex items-center gap-2">
-                <span className="text-xs font-bold px-2 py-0.5 bg-blue-50 text-blue-600 rounded-md border border-blue-100">รหัสคอร์สย่อย: {quiz.code}</span>
-                <span className="text-xs font-medium px-2 py-0.5 bg-gray-100 text-gray-600 rounded-md">⏱️ เวลาสอบ: {quiz.duration}</span>
+        {/* ตารางกางรายชื่อชุดข้อสอบย่อย 15 ชุดขอบมนละมุนตา */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem', marginBottom: '2.5rem' }}>
+          {examSetsList.map((quiz: any) => {
+            const isCurrentActive = activeSet?.code === quiz.code;
+            return (
+              <div key={quiz.id} style={{ padding: '1.25rem', backgroundColor: '#ffffff', border: isCurrentActive ? '2px solid #0052cc' : '1px solid #e2e8f0', borderRadius: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.02)', flexWrap: 'wrap', gap: '15px', transition: 'all 0.2s' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                  <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                    <span style={{ fontSize: '0.75rem', fontWeight: '800', backgroundColor: '#f0f4f8', color: '#0052cc', padding: '0.2rem 0.6rem', borderRadius: '6px' }}>รหัสชุด: {quiz.code}</span>
+                    <span style={{ fontSize: '0.75rem', fontWeight: '600', color: '#64748b' }}>⏱️ เวลาสอบ: {quiz.duration}</span>
+                  </div>
+                  <strong style={{ fontSize: '1rem', color: '#1e293b', fontWeight: '700', marginTop: '2px' }}>{quiz.title}</strong>
+                </div>
+                <button onClick={() => startPretest(quiz.code, quiz.title)} style={{ backgroundColor: '#0052cc', color: 'white', border: 'none', padding: '0.65rem 1.5rem', borderRadius: '10px', cursor: 'pointer', fontWeight: '750', fontSize: '0.88rem', boxShadow: '0 4px 6px rgba(0,82,204,0.15)' }}>📝 เริ่มทำข้อสอบ</button>
               </div>
-              <strong className="text-gray-800 text-base font-semibold mt-1">{quiz.title}</strong>
-            </div>
-            <button 
-              onClick={() => startPretest(quiz.code, quiz.title)}
-              className="px-5 py-2.5 bg-blue-600 text-white rounded-xl hover:bg-bg-blue-700 transition font-semibold shadow-sm text-sm"
-            >
-              📝 เริ่มทำข้อสอบ
-            </button>
-          </div>
-        ))}
-      </div>
-      
-      {/* 💡 ส่วนกางแถวกล่องทำข้อสอบ (Render คำถาม 150 ข้อด้านล่างโครงสร้างเดิมของพาร์ทเนอร์) */}
-      {activeQuestions.length > 0 && !quizSubmitted && (
-        <div className="mt-8 p-6 bg-white rounded-2xl border border-gray-200 shadow-sm">
-          <div className="flex justify-between items-center mb-4 border-b pb-2">
-            <span className="font-bold text-gray-700">ข้อที่ {currentQuestionIndex + 1} / {activeQuestions.length}</span>
-            <span className="text-sm text-blue-600 font-semibold">{liveExamScore}</span>
-          </div>
-          <p className="text-lg font-semibold text-gray-900 mb-6">{activeQuestions[currentQuestionIndex].question_text}</p>
-          <div className="grid gap-3 mb-6">
-            {['A', 'B', 'C', 'D'].map((choice) => {
-              const choiceKey = `choice_${choice.toLowerCase()}`;
-              return (
-                <button
-                  key={choice}
-                  onClick={() => setSelectedAnswers({ ...selectedAnswers, [activeQuestions[currentQuestionIndex].id]: choice })}
-                  className={`p-4 rounded-xl text-left border transition font-medium ${
-                    selectedAnswers[activeQuestions[currentQuestionIndex].id] === choice
-                      ? 'bg-blue-50 border-blue-500 text-blue-700 font-bold'
-                      : 'border-gray-200 hover:bg-gray-50 text-gray-700'
-                  }`}
-                >
-                  <span className="inline-block w-8 h-8 rounded-full bg-gray-100 text-center leading-8 mr-3 font-bold text-sm">{choice}</span>
-                  {activeQuestions[currentQuestionIndex][choiceKey]}
-                </button>
-              );
-            })}
-          </div>
-          <div className="flex justify-between items-center pt-4 border-t">
-            <button
-              disabled={currentQuestionIndex === 0}
-              onClick={() => setCurrentQuestionIndex(currentQuestionIndex - 1)}
-              className="px-4 py-2 border rounded-xl hover:bg-gray-50 disabled:opacity-40 transition font-medium"
-            >
-              ⬅️ ข้อก่อนหน้า
-            </button>
-            {currentQuestionIndex < activeQuestions.length - 1 ? (
-              <button
-                onClick={() => setCurrentQuestionIndex(currentQuestionIndex + 1)}
-                className="px-5 py-2 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition font-medium"
-              >
-                ข้อถัดไป ➡️
-              </button>
-            ) : (
-              <button
-                onClick={submitQuiz}
-                className="px-6 py-2.5 bg-green-600 text-white rounded-xl hover:bg-green-700 transition font-bold shadow-md"
-              >
-                🚀 ส่งกระดาษคำตอบ
-              </button>
-            )}
-          </div>
+            );
+          })}
         </div>
-      )}
+        {/* 💡 ส่วนกางกระดานทำข้อสอบ (Render คำถาม 150 ข้อ ดีไซน์หรูหรา Inline CSS) */}
+        {activeQuestions.length > 0 && !quizSubmitted && (
+          <div style={{ marginTop: '2rem', padding: '2rem', backgroundColor: '#ffffff', borderRadius: '24px', border: '1px solid #e2e8f0', boxShadow: '0 10px 25px -5px rgba(0,0,0,0.03)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', borderBottom: '2px solid #f1f5f9', paddingBottom: '0.75rem' }}>
+              <span style={{ fontWeight: '800', color: '#0f172a', fontSize: '1.05rem' }}>📋 ข้อสอบข้อที่ {currentQuestionIndex + 1} / {activeQuestions.length}</span>
+              <span style={{ fontSize: '0.88rem', color: '#0052cc', fontWeight: '700', backgroundColor: '#ebf5ff', padding: '0.3rem 0.8rem', borderRadius: '100px' }}>{liveExamScore}</span>
+            </div>
+            
+            <p style={{ fontSize: '1.1rem', fontWeight: '700', color: '#1e293b', marginBottom: '2rem', lineHeight: '1.6' }}>{activeQuestions[currentQuestionIndex].question_text}</p>
+            
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem', marginBottom: '2rem' }}>
+              {['A', 'B', 'C', 'D'].map((choice) => {
+                const choiceKey = `choice_${choice.toLowerCase()}`;
+                const isSel = selectedAnswers[activeQuestions[currentQuestionIndex].id] === choice;
+                
+                return (
+                  <button
+                    key={choice}
+                    onClick={() => setSelectedAnswers({ ...selectedAnswers, [activeQuestions[currentQuestionIndex].id]: choice })}
+                    style={{
+                      width: '100%',
+                      padding: '1.1rem 1.25rem',
+                      borderRadius: '14px',
+                      border: isSel ? '2px solid #0052cc' : '1px solid #cbd5e1',
+                      backgroundColor: isSel ? '#eff6ff' : '#ffffff',
+                      color: isSel ? '#0052cc' : '#334155',
+                      fontWeight: isSel ? '700' : '600',
+                      textAlign: 'left',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '12px',
+                      cursor: 'pointer',
+                      transition: 'all 0.15s ease',
+                      outline: 'none'
+                    }}
+                  >
+                    <span style={{
+                      display: 'flex',
+                      justifyContent: 'center',
+                      alignItems: 'center',
+                      width: '28px',
+                      height: '28px',
+                      borderRadius: '50%',
+                      backgroundColor: isSel ? '#0052cc' : '#f1f5f9',
+                      color: isSel ? '#ffffff' : '#475569',
+                      fontSize: '0.88rem',
+                      fontWeight: '800'
+                    }}>
+                      {choice === 'A' ? 'ก' : choice === 'B' ? 'ข' : choice === 'C' ? 'ค' : 'ง'}
+                    </span>
+                    <span style={{ fontSize: '0.98rem' }}>{activeQuestions[currentQuestionIndex][choiceKey]}</span>
+                  </button>
+                );
+              })}
+            </div>
+            
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '1.25rem', borderTop: '1px solid #e2e8f0' }}>
+              <button
+                disabled={currentQuestionIndex === 0}
+                onClick={() => setCurrentQuestionIndex(currentQuestionIndex - 1)}
+                style={{
+                  padding: '0.55rem 1.35rem',
+                  borderRadius: '10px',
+                  border: '1px solid #cbd5e1',
+                  backgroundColor: '#ffffff',
+                  color: '#475569',
+                  fontWeight: '700',
+                  cursor: currentQuestionIndex === 0 ? 'not-allowed' : 'pointer',
+                  opacity: currentQuestionIndex === 0 ? 0.4 : 1,
+                  fontSize: '0.88rem',
+                  transition: 'all 0.15s'
+                }}
+              >
+                ⬅️ ข้อก่อนหน้า
+              </button>
+              
+              {currentQuestionIndex < activeQuestions.length - 1 ? (
+                <button
+                  onClick={() => setCurrentQuestionIndex(currentQuestionIndex + 1)}
+                  style={{
+                    padding: '0.55rem 1.35rem',
+                    borderRadius: '10px',
+                    border: 'none',
+                    backgroundColor: '#0052cc',
+                    color: '#ffffff',
+                    fontWeight: '700',
+                    cursor: 'pointer',
+                    fontSize: '0.88rem',
+                    boxShadow: '0 4px 6px rgba(0,82,204,0.15)',
+                    transition: 'all 0.15s'
+                  }}
+                >
+                  ข้อถัดไป ➡️
+                </button>
+              ) : (
+                <button
+                  onClick={submitQuiz}
+                  style={{
+                    padding: '0.65rem 1.6rem',
+                    borderRadius: '10px',
+                    border: 'none',
+                    backgroundColor: '#10b981',
+                    color: '#ffffff',
+                    fontWeight: '800',
+                    cursor: 'pointer',
+                    fontSize: '0.9rem',
+                    boxShadow: '0 4px 8px rgba(16,185,129,0.2)',
+                    transition: 'all 0.15s'
+                  }}
+                >
+                  🚀 ส่งกระดาษคำตอบ
+                </button>
+              )}
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
@@ -371,7 +442,7 @@ function ClassroomPretestContent() {
 // 🏛️ ส่วนกรอบครอบสำหรับการทำงาน Client-side ใน Next.js App Router
 export default function ClassroomPretestPage() {
   return (
-    <Suspense fallback={<div className="p-8 text-center text-gray-500 font-medium">⏳ กำลังดำเนินการโหลดระบบคลังระบบความปลอดภัย...</div>}>
+    <Suspense fallback={<div style={{ padding: '3rem', textAlign: 'center', fontWeight: '700', fontFamily: '"Inter", "Prompt", sans-serif', color: '#64748b' }}>⏳ กำลังดำเนินการโหลดระบบคลังระบบความปลอดภัยพรีเทส...</div>}>
       <ClassroomPretestContent />
     </Suspense>
   );
