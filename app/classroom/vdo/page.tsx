@@ -64,12 +64,10 @@ function ClassroomVdoContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  // 🏛️ สารบบดึงค่าพารามิเตอร์ความปลอดภัย
   const studentPhone = searchParams.get('phone') || '';
   const studentName = searchParams.get('name') || '';
   const courseParam = searchParams.get('course') || '';
 
-  // 🔒 ผูก State ควบคุมพิมพ์เขียวบอร์ดวิดีโอ
   const [myCourses, setMyCourses] = useState<string[]>([]);
   const [courseNameDisplay, setCourseNameDisplay] = useState(courseParam);
   const currentCourse = courseParam;
@@ -83,7 +81,6 @@ function ClassroomVdoContent() {
   const [quizSubmitted, setQuizSubmitted] = useState(false);
   const [liveExamScore, setLiveExamScore] = useState('ยังไม่ได้เข้าทดสอบ 📝');
   const [loading, setLoading] = useState(true);
-
   // 📍 เปิดระบบทะเบียน 12 คอร์สหลักอัตโนมัติประจำกระดาน Dropdown
   useEffect(() => {
     const masterCourses = [
@@ -226,7 +223,6 @@ function ClassroomVdoContent() {
       router.push(`/classroom/vdo${params}`); 
     }
   };
-
   if (loading) return <div style={{ padding: '2rem', textAlign: 'center', fontWeight: '700', fontFamily: '"Inter", "Prompt", sans-serif', color: '#64748b' }}>⏳ ระบบ Guard กำลังตรวจเช็คสิทธิ์และจัดเรียงระบบห้องเรียนวิดีโอ...</div>;
 
   return (
@@ -283,7 +279,6 @@ function ClassroomVdoContent() {
                 </div>
               </div>
             )}
-
             {activeQuestions.length > 0 && (
               <div>
                 <h3 style={{ borderBottom: '2px solid #f1f5f9', paddingBottom: '0.5rem', fontWeight: '800', color: '#0f172a' }}>📝 ควิซท้ายบทเรียน ข้อที่ {currentQuestionIndex + 1} / {activeQuestions.length}</h3>
