@@ -155,55 +155,40 @@ function ClassroomPretestContent() {
     checkAndLoadQuestions();
   }, [courseParam, studentPhone, myCourses, router]);
 
-    // 📝 6. ฟังก์ชันโหลดคำถามชุดใหญ่ พร้อมระบบจัดระเบียบเรียงคิววิชาภาษาอังกฤษไปปิดท้ายเล่มอัตโนมัติ (แก้ไขปัญหาข้อสลับแทรก 100%)
+  // 📝 6. ฟังก์ชันโหลดคำถามชุดใหญ่เรียงแถวตรงตามเลข ID หลังบ้านที่พาร์ทเนอร์ตรวจสอบแล้วว่าถูกต้อง 100%
   const startPretest = async (setCode: string, setTitle: string) => {
-    setQuizSubmitted(false); 
-    setSelectedAnswers({}); 
-    setCurrentQuestionIndex(0); 
+    setQuizSubmitted(false);
+    setSelectedAnswers({});
+    setCurrentQuestionIndex(0);
     setActiveQuestions([]);
-    setTimeLeft(180 * 60); 
+    setTimeLeft(180 * 60);
     setIsTimerRunning(true);
     setLiveExamScore('กำลังทดสอบ ⏳');
-    
+
     try {
-      // 🎯 ดึงข้อสอบทั้งหมดขึ้นมาจากคลังก่อน
       const { data, error } = await supabase
         .from('questions')
         .select('*')
-        .eq('subject_code', setCode);
+        .eq('subject_code', setCode)
+        .order('id', { ascending: true }); // ดึงตามไอดีเรียงจากน้อยไปมาก ตรงล็อกฐานข้อมูลที่จัดเรียงมาแล้ว 100%
 
       if (error) throw error;
 
       if (data && data.length > 0) {
-        // 🚀 อัลกอริทึมจัดระเบียบสารบัญข้อสอบ: สแกนหาคำสำคัญในตัวโจทย์เพื่อจัดหมวดหมู่ส่งท้ายเล่ม
-        const sortedQuestions = [...data].sort((a, b) => {
-          // ตรวจสอบเช็กว่าเป็นข้อสอบหมวดวิชาภาษาอังกฤษหรือไม่ (เช็กจากชื่อฟิลด์ย่อย หรือ คำศัพท์เฉพาะกลุ่ม)
-          const isAEnglish = (a.subject_name?.toLowerCase().includes('eng') || a.question_text?.match(/[a-zA-Z]{4,}\s/g)) ? 1 : 0;
-          const isBEnglish = (b.subject_name?.toLowerCase().includes('eng') || b.question_text?.match(/[a-zA-Z]{4,}\s/g)) ? 1 : 0;
-
-          // 💡 กฎเหล็ก: ถ้าตัวไหนเป็นภาษาอังกฤษ ให้ดีดเด้งผลลัพธ์ไปต่อคิวท้ายสุดของอาร์เรย์ร้อยเปอร์เซ็นต์
-          if (isAEnglish !== isBEnglish) {
-            return isAEnglish - isBEnglish; 
-          }
-          
-          // ถ้าเป็นวิชาบรรยายทั่วไปในกลุ่มเดียวกัน ให้เรียงแถวตามลำดับตัวเลข ID น้อยไปมากตามปกติ
-          return a.id - b.id;
-        });
-
-        setActiveQuestions(sortedQuestions); 
+        setActiveQuestions(data);
       } else {
-        setActiveQuestions([{ 
-          id: 9999, 
-          question_text: `📌 ข้อสอบฟูลสเกล 150 ข้อของชุด ${setTitle} กำลังอัปโหลดเข้าระบบเร็วๆ นี้ครับ...`, 
-          choice_a: 'เตรียมความพร้อม', 
-          choice_b: 'รับทราบ', 
-          choice_c: 'อ่านทบทวนเนื้อหา', 
-          choice_d: 'ลุยสอบสนามจริง', 
-          correct_choice: 'choice_a' 
+        setActiveQuestions([{
+          id: 9999,
+          question_text: `📌 ข้อสอบฟูลสเกล 150 ข้อของชุด ${setTitle} กำลังอัปโหลดเข้าระบบเร็วๆ นี้ครับ...`,
+          choice_a: 'เตรียมความพร้อม',
+          choice_b: 'รับทราบ',
+          choice_c: 'อ่านทบทวนเนื้อหา',
+          choice_d: 'ลุยสอบสนามจริง',
+          correct_choice: 'choice_a'
         }]);
       }
-    } catch (err) { 
-      console.error('Fetch and Sort pretest questions error:', err); 
+    } catch (err) {
+      console.error('Fetch pretest questions error:', err);
     }
   };
 
@@ -227,15 +212,15 @@ function ClassroomPretestContent() {
     const s = seconds % 60;
     return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
   };
-    // 🏆 9. ฟังก์ชันคำนวณคะแนนแบบแปรผันตามหลักสูตรคอร์สเรียน (คอร์ส 12 แยก 2 ภาควิชา / คอร์ส 9 และ 10 คิดคะแนนรวมปกติ)
+  // 🏆 9. ฟังก์ชันคำนวณคะแนนแบบแปรผันตามหลักสูตรคอร์สเรียน (คอร์ส 12 แยก 2 ภาควิชา / คอร์ส 9 และ 10 คิดคะแนนรวมปกติ)
   const submitQuiz = async () => {
     if (quizSubmitted) return;
     setIsTimerRunning(false);
-    
+
     let totalCorrect = 0;
     let part1Correct = 0; // ภาคความรู้ความสามารถทั่วไป (ข้อ 1-40)
     let part2Correct = 0; // ภาคความรู้ความสามารถที่ใช้เฉพาะตำแหน่ง (ข้อ 41-150)
-    
+
     const part1Total = 40;
     const part2Total = 110;
     const grandTotal = activeQuestions.length || 150;
@@ -261,7 +246,7 @@ function ClassroomPretestContent() {
 
     // 🔍 ระบบแยกเลนตรวจสิทธิ์เกณฑ์อัจฉริยะดักทางตามคำสั่งพาร์ทเนอร์
     const isCourse12 = currentCourse.includes('สาย อก./สพฐ.ตร.') || currentCourse.includes('หลักสูตรใหม่ล่าสุด') || currentCourse.includes('12');
-    
+
     let isAllPassed = false;
     let passedStatusText = '';
     let reportAlertText = '';
@@ -272,8 +257,8 @@ function ClassroomPretestContent() {
       const isPart2Passed = part2Percent >= 60;
       isAllPassed = isPart1Passed && isPart2Passed;
       passedStatusText = isAllPassed ? 'ผ่านเกณฑ์ข้าราชการตำรวจ 🎉' : 'ยังไม่ผ่านเกณฑ์ (ต้องผ่าน 60% ทั้ง 2 ภาควิชา) ❌';
-      
-      reportAlertText = 
+
+      reportAlertText =
         `📊 [สรุปรายงานผลคะแนนสอบเสมือนจริงฟูลสเกล สาย อก./สพฐ.ตร.]\n` +
         `------------------------------------------\n` +
         `📝 ผลคะแนนรวมทั้งหมด: ${totalCorrect} / ${grandTotal} ข้อ (${totalPercent.toFixed(0)}%)\n\n` +
@@ -291,8 +276,8 @@ function ClassroomPretestContent() {
       // 🎓 สเปกคอร์ส 9 และ 10: คิดคะแนนรวมภาพรวมผ่าน 60% ปกติแบบสัมฤทธิผลสากล
       isAllPassed = totalPercent >= 60;
       passedStatusText = isAllPassed ? 'ผ่านเกณฑ์คะแนนรวมทดสอบแล้ว 🎉' : 'ยังไม่ผ่านเกณฑ์คะแนนรวม (เกณฑ์ผ่าน 60% ขึ้นไป) ❌';
-      
-      reportAlertText = 
+
+      reportAlertText =
         `📊 [สรุปรายงานผลคะแนนสอบพรีเทสเสมือนจริง]\n` +
         `------------------------------------------\n` +
         `📝 คะแนนที่ทำได้จริง: ${totalCorrect} / ${grandTotal} ข้อ\n` +
@@ -310,7 +295,7 @@ function ClassroomPretestContent() {
       await supabase.from('quiz_attempts').insert([
         {
           student_phone: studentPhone,
-          subject_name: `${currentCourse} (Pre-test)`, 
+          subject_name: `${currentCourse} (Pre-test)`,
           score_obtained: totalCorrect,
           total_questions: grandTotal,
           passed_status: isAllPassed ? 'ผ่านเกณฑ์' : 'ไม่ผ่านเกณฑ์'
